@@ -21,18 +21,20 @@ FROM deps AS build
 COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/web ./apps/web
+COPY content ./content
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @atlas/web build
 
 FROM node:22-alpine AS run
 WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 MIGRATIONS_DIR=/app/migrations
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 MIGRATIONS_DIR=/app/migrations CONTENT_DIR=/app/content
 RUN addgroup -S atlas && adduser -S atlas -G atlas
 COPY --from=build --chown=atlas:atlas /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=atlas:atlas /repo/apps/web/.next/static ./apps/web/.next/static
 # Standalone output does not include public/; copy it (sandbox runner page lives there).
 COPY --from=build --chown=atlas:atlas /repo/apps/web/public ./apps/web/public
 COPY --from=build --chown=atlas:atlas /repo/apps/web/db/migrations ./migrations
+COPY --from=build --chown=atlas:atlas /repo/content ./content
 USER atlas
 EXPOSE 3000
 HEALTHCHECK --interval=5s --timeout=3s --retries=30 CMD wget -qO- --header "Host: localhost:3000" http://127.0.0.1:3000/api/healthz >/dev/null || exit 1

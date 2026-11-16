@@ -18,6 +18,10 @@ if (process.env.DATABASE_MIGRATE_URL && process.env.MIGRATIONS_DIR) {
     try {
       await runMigrations(process.env.DATABASE_MIGRATE_URL, process.env.MIGRATIONS_DIR);
       process.stdout.write(JSON.stringify({ level: "info", msg: "migrations applied" }) + "\n");
+      // Content seed (curriculum, gates, exercises, sources) runs with the app user after migrations; idempotent.
+      const { seed } = await import("./modules/learning/service.ts");
+      await seed();
+      process.stdout.write(JSON.stringify({ level: "info", msg: "content seeded" }) + "\n");
       break;
     } catch (e) {
       if (attempt >= 30) { process.stderr.write(JSON.stringify({ level: "fatal", msg: "migrations failed", error: String(e) }) + "\n"); process.exit(1); }
