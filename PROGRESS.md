@@ -1,5 +1,23 @@
 # PROGRESS.md
 
+## 2026-11-16: Repository move to AI-Learning-Path + P0 review
+
+- **Home repository:** https://github.com/harisonharold/AI-Learning-Path, branch `ccr-42198ca2-6rc626`. `main` is untouched (`d54d076`, your original README).
+- **Commits:** the three P0 commits from `harisonharold/sloane` were replayed on top of `d54d076`. The file trees are identical except `README.md`, which keeps your `# AI-Learning-Path` heading as its first line. A fourth commit then moved the repo-name references and applied the P0 review.
+- **CI on AI-Learning-Path:** run [43916244822](https://github.com/harisonharold/AI-Learning-Path/actions/runs/43916244822) on `21629ce` passed all four jobs:
+  - lint, typecheck, unit tests, bundle scan
+  - Python checks
+  - integration
+  - Compose + AT-01 + e2e/axe + Caddy
+- **CI on the earlier sloane push:** run [43909446923](https://github.com/harisonharold/sloane/actions/runs/43909446923) on `5ead251` also passed.
+- **P0 review applied:**
+  - D-25 documented in THREAT_MODEL §3a. Better Auth's XChaCha20-Poly1305 settings were checked against the 1.7.25 source.
+  - D-29/D-30 revisit items added to TASKS.md.
+  - D-31/D-32/D-34 approved.
+  - SHA-pinning of Actions (D-38) is now a P1 exit condition.
+- **sloane:** nothing deleted, reverted or force-pushed. It waits for your decision (PLAN §1).
+
+
 ## 2026-11-16 — P0 Groundwork (finished; awaiting review before P1)
 
 ### Built
@@ -83,7 +101,7 @@ Acceptance tests covered in P0:
 - **Lint config**: the `eslint-plugin-boundaries` config was rewritten for v7 syntax, and a test now proves each rule fires on a planted violation.
 
 ### Not done / limits (honest)
-- **CI not yet run on GitHub**: this push is its first run. Actions are pinned to major tags, not commit SHAs (follow-up).
+- **CI action pinning**: actions are pinned to major tags, not commit SHAs. D-38 makes SHA pinning a P1 exit condition.
 - **No OpenTelemetry instrumentation yet**: Jaeger runs but nothing exports traces. G §10 does not list it under P0; planned for P1.
 - **Redis token-bucket rate limits** for mentor and uploads arrive with those features. Only the auth endpoints are limited now, by Better Auth's in-memory limiter.
 - **Real GitHub sign-in is unchecked**: it is a manual check (Q4) and needs your GitHub App. CI uses the mock.
