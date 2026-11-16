@@ -4,6 +4,8 @@
 
 Four to six months will not make anyone an expert, and this app cannot promise interviews, offers or pay.
 
+Repository: https://github.com/harisonharold/AI-Learning-Path
+
 Status: **phase P0 (groundwork)**. See `PROGRESS.md` for what works and what doesn't, and `PLAN.md` for the full plan.
 
 ## Run it (one command)

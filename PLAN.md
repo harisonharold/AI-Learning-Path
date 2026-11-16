@@ -6,20 +6,24 @@ Authoritative spec: `docs/spec/G_claude_code_prompt.md` (wins on conflict). Supp
 
 ---
 
-## 1. Repository findings (inspected 2026-11-16)
+## 1. Repository findings
 
-| Item | Finding |
+**Home repository: [harisonharold/AI-Learning-Path](https://github.com/harisonharold/AI-Learning-Path)** (public; default branch `main`).
+
+| Item | Finding (AI-Learning-Path, inspected 2026-11-16) |
 |---|---|
-| Branches | `main`, `ccr-42198ca2-6rc626` (current working branch), both at the same commit |
-| History | 1 commit: `55f75c3 Initial commit` |
-| Files before this session | `README.md` with the single line `# sloane` (no trailing newline) |
+| Branches | `main` only |
+| History | 1 commit: `d54d076 Initial commit` (Harison Harold) |
+| Files before this work | `README.md` with the single line `# AI-Learning-Path` |
 | Code, deps, CI, Docker | None |
-| Added this session | `docs/spec/` (11 spec files copied from the uploads, upload-hash prefixes removed), `PLAN.md`, `THREAT_MODEL.md`, `docs/DATA_MODEL.md` |
+| This work | On branch `ccr-42198ca2-6rc626`, built on top of `d54d076`; `main` is untouched. The existing README heading is kept as the first line of the new README |
+
+**Repository move (2026-11-16).** Planning and P0 were first pushed by mistake to `harisonharold/sloane` (branch `ccr-42198ca2-6rc626`, commits `cc64ecb`, `036fde4`, `5ead251`; that repo's `main` was never changed). The same three commits were replayed here with identical file trees except `README.md`, then the repo-name fixes below were added. Nothing in `sloane` has been deleted or reverted; that waits for Harison's decision.
 
 Notes on the spec files:
 - `G_master_prompt.md` wraps text that is byte-identical to `G_claude_code_prompt.md` (checked with `diff`). Both are kept; `G_claude_code_prompt.md` is the one we cite.
 - `G_fable_prompt.md` mentions a `MASTER_PROMPT.md`. No file with that name was uploaded; `G_master_prompt.md` is assumed to be it (Open Question Q1).
-- The repo is named `sloane`; the product is "Systems Atlas". Directory layout follows G §2 at the repo root (no `systems-atlas/` subfolder as drawn in D.2).
+- The repo is `AI-Learning-Path`; the product is "Systems Atlas". Directory layout follows G §2 at the repo root (no `systems-atlas/` subfolder as drawn in D.2).
 
 ---
 
@@ -363,7 +367,7 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 
 | ID | Decision | Why |
 |---|---|---|
-| D-23 | `ALLOWED_GITHUB_USER_ID=123658133`, read from the `owner.id` of `GET /repos/harisonharold/sloane` on 2026-11-16 (`/users/{login}` is blocked from the build sandbox) | Q22 |
+| D-23 | `ALLOWED_GITHUB_USER_ID=123658133`, read from the `owner.id` of `GET /repos/harisonharold/AI-Learning-Path` on 2026-11-16 (same id as first read from the earlier repo; `/users/{login}` is blocked from the build sandbox) | Q22 |
 | D-24 | GitHub sign-in uses Better Auth's `genericOAuth` plugin (provider id `github`), not its built-in GitHub provider, because the built-in one hard-codes GitHub URLs and its own token POST. With `genericOAuth`, `modules/auth/internal/github-oauth.ts` owns the single token POST and the mock server can be used in CI | AT-27 reworded, Q4 |
 | D-25 | **Changed vs NFR-1 wording:** Better Auth's account tokens are encrypted with its built-in `encryptOAuthTokens` (XChaCha20-Poly1305, key derived from `BETTER_AUTH_SECRET`) instead of a custom AES-256-GCM hook. AES-256-GCM with `TOKEN_ENC_KEY` (`modules/platform/internal/crypto.ts`) remains the scheme for our own secrets (AI keys, P4 GitHub App tokens). Both are AEADs; this avoids patching a library's storage path. Revert if you want one scheme everywhere | fewer moving parts |
 | D-26 | If GitHub returns no public email, the user's email is GitHub's no-reply form `<id>+<login>@users.noreply.github.com`, so the App needs no email permission | keeps the App read-only and minimal |
@@ -378,6 +382,13 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 | D-35 | System font stacks in P0; self-hosted Source Serif 4 / Inter / JetBrains Mono deferred to P1 with the licence check (Q19) | no network fetch at build |
 | D-36 | Better Auth tables are hand-written in Drizzle to mirror better-auth 1.7.25's core schema (instead of running its separate CLI package); the Drizzle adapter works against them in e2e | one migration tool, no extra package |
 | D-37 | The account-delete revoke link `https://github.com/settings/apps/authorizations` and its steps are shown labelled **Unverified**: docs.github.com and github.com were unreachable from the build sandbox. Verification job (P3-core) must check it | rule 9 |
+
+**P0 review outcome (Harison, 2026-11-16):**
+- **D-25 approved.** Better Auth's built-in encryption for its GitHub tokens; AES-256-GCM for our own secrets. Both are documented in THREAT_MODEL §3a.
+- **D-29, D-30 approved** (ESLint 9.39.5, TypeScript 5.9.3). TASKS.md tracks revisiting them once Next.js supports ESLint 10 / TypeScript 7.
+- **D-31, D-32, D-34 approved.**
+- **D-38 (new):** pin every GitHub Action in `.github/workflows/` to a full commit SHA (with the version as a comment) before P1 ends. It is a P1 exit condition in TASKS.md.
+- **D-39 (new):** the project's home is `harisonharold/AI-Learning-Path`; work lands on branch `ccr-42198ca2-6rc626` and reaches `main` only when Harison approves. The mistaken pushes to `harisonharold/sloane` stay untouched until Harison decides (see §1).
 
 ---
 

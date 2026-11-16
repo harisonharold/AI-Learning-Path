@@ -22,13 +22,16 @@ Status: `done` = its tests pass; `todo`; `blocked` = waiting on Harison.
 | Forbidden-strings check | done | planted-string tests |
 | Log redaction | done | X-03 |
 | Account delete without GitHub calls | done | X-14 |
-| CI workflow | done (not yet run on GitHub) | — |
+| CI workflow | done (green on harisonharold/sloane run #1; AI-Learning-Path run: see PROGRESS.md) | — |
 | Real GitHub sign-in (manual) | blocked: needs GitHub App credentials | manual |
 | Verify revoke link (D-37) | todo (P3-core job) | — |
+| Move work to harisonharold/AI-Learning-Path (D-39) | done | CI on AI-Learning-Path |
+| Decide what to do with the mistaken pushes in harisonharold/sloane | blocked: waiting for Harison | — |
 
 ## P1 Learning core (next; not started)
 | Task | Status |
 |---|---|
+| **P1 exit condition:** pin every GitHub Action in `.github/workflows/` to a full commit SHA, version in a comment (D-38) | todo |
 | OpenTelemetry → Jaeger for web, workers, api-py | todo |
 | Self-hosted fonts + OFL licence check (Q19) | todo |
 | Content pipeline: `curriculum.yaml`, `sources.yaml`, W1–W3 MDX lessons + cards | todo |
@@ -42,3 +45,10 @@ Status: `done` = its tests pass; `todo`; `blocked` = waiting on Harison.
 | Daily workspace + timer / time logs | todo |
 | Diagnostic (W1–W3 skips need counting evidence, Q23) | todo |
 | Learning-progress meter | todo |
+
+## Revisit later
+| Task | Trigger | Status |
+|---|---|---|
+| Move to ESLint 10 (D-29) | `eslint-config-next` and its plugins (react, import, jsx-a11y) declare ESLint 10 support | todo, check at each Next.js minor upgrade |
+| Move to TypeScript 7 (D-30) | Next.js and typescript-eslint support the TS 7 native compiler | todo, check at each Next.js minor upgrade |
+| Better Auth tables vs upstream schema (D-36) | any better-auth upgrade | todo, re-diff core schema on upgrade |

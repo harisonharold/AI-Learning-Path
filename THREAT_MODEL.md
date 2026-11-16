@@ -79,7 +79,7 @@ Format: threat → mitigation → test.
 |---|---|---|---|---|
 | T-D1 | I/T | Unauthenticated Redis on host network | `requirepass`/ACL, internal network only, no published port in prod | Compose config test |
 | T-D2 | E | SQL injection | Drizzle parameterised queries only; raw SQL banned by lint except reviewed FULLTEXT helper with bound params | lint + int test |
-| T-D3 | I | Stolen DB dump reveals tokens/keys | AES-256-GCM with key id, AAD binds ciphertext to user+purpose; key only in env; backups encrypted by restic | AT-37, crypto U test (swap ciphertext between users → decrypt fails) |
+| T-D3 | I | Stolen DB dump reveals tokens/keys | Two encryption-at-rest schemes, both AEAD, keys only in env (§3a): Better Auth `encryptOAuthTokens` for its `account` tokens; our AES-256-GCM (key id + AAD binding user+purpose) for everything we store ourselves. Backups encrypted by restic | AT-37, crypto U test (swap ciphertext between users → decrypt fails), e2e "stored access token is not the plaintext token" |
 | T-D4 | T | Python service writes DB | api-py/worker-py have no DB credentials at all (single-writer by capability) | Compose env test |
 
 ### TB7 Runner ⇄ web
@@ -126,6 +126,21 @@ See §4 (LLM threats). Network-level: key sent only to the provider host; TLS; n
 | T-K2 | D | Backups silently broken | Restore test with row-count check | **AT-44** |
 | T-C1 | T | Content YAML introduces a false fact | Seed loader requires URL + verified_at for every fact; verification job re-checks | AT-12, AT-22 |
 | T-C2 | E | Supply chain (npm/PyPI/Docker images) | Lockfiles, pinned versions/digests, no install scripts where avoidable (`pnpm` `onlyBuiltDependencies`), Dependabot alerts read-only | CI lockfile check |
+
+## 3a. Encryption at rest (approved 2026-11-16, PLAN D-25)
+
+Two schemes are used deliberately; each covers a separate set of columns, and no column uses both.
+
+| Scheme | Used for | Algorithm | Key | Where | Tests |
+|---|---|---|---|---|---|
+| **Better Auth built-in** (`account.encryptOAuthTokens: true`) | GitHub sign-in tokens in Better Auth's `account` table: `access_token`, `refresh_token`, `id_token` | XChaCha20-Poly1305 with a random nonce (Better Auth `symmetricEncrypt`, `@noble/ciphers`); checked in better-auth 1.7.25 source | SHA-256 of `BETTER_AUTH_SECRET` (Better Auth's versioned secrets supported) | `modules/auth/internal/better-auth.ts` | e2e `auth.spec.ts`: stored token ≠ the plaintext `ghu_…` token |
+| **Our AES-256-GCM envelope** | Every secret *we* store: user AI provider keys (`ai_credentials.key_enc`, P5), GitHub App installation tokens (`gh_installations.token_enc/refresh_enc`, P4), any future secret column | AES-256-GCM, 96-bit random nonce, 128-bit tag; envelope = key id ‖ nonce ‖ ciphertext ‖ tag; AAD = owner id + purpose | `TOKEN_ENC_KEY` (32 bytes, base64), versioned by `TOKEN_ENC_KEY_ID` for rotation | `modules/platform/internal/crypto.ts` | `crypto-log.test.ts`: round trip, AAD swap between users fails, tamper fails, unknown key id fails, plaintext absent; AT-37 (P5) |
+
+Consequences and rules:
+- **Two keys to protect.** `BETTER_AUTH_SECRET` now also protects GitHub tokens: rotating it invalidates sessions *and* makes stored GitHub tokens undecryptable, so the user must sign in again (acceptable: tokens are re-issued on sign-in). `TOKEN_ENC_KEY` rotation is planned via `key_id` (old key kept for decrypt until re-encrypted).
+- **Plaintext tolerated on read.** Better Auth returns a stored token unchanged if it does not look encrypted (a migration convenience). Our rows are always written with encryption on, and the e2e test checks the stored value is not the plaintext token.
+- **No AAD binding in the Better Auth scheme.** A ciphertext copied to another `account` row would still decrypt. Mitigated because only one account can exist (single-id allowlist) and DB write access already implies full compromise; recorded as RR10.
+- **Rule for new code:** any new secret column uses the AES-256-GCM helper through `modules/platform/service.ts`; never Better Auth's helper and never plaintext. Reviewed per PR.
 
 ## 4. LLM-specific threats
 
@@ -203,7 +218,7 @@ Revision 2 status: items 1–8 resolved by approved decisions — 1 → D-17/X-0
 | ID | Residual risk | Why accepted |
 |---|---|---|
 | RR1 | atlas-lab runs on the learner's own machine, so its results can still be forged (browser results can't count at all, D-15) | Single-user product; public evidence (merged PRs, repo CI status) is verified via the GitHub API; every gate shows which evidence kinds passed it |
-| RR2 | A compromised VM exposes `TOKEN_ENC_KEY` and therefore all encrypted tokens/keys | One-box deployment; mitigated by read-only GitHub scope and provider spend caps the user sets at the provider (C.9 step 1) |
+| RR2 | A compromised VM exposes `TOKEN_ENC_KEY` and `BETTER_AUTH_SECRET` and therefore all encrypted tokens/keys | One-box deployment; mitigated by read-only GitHub scope and provider spend caps the user sets at the provider (C.9 step 1) |
 | RR3 | Prompt injection can still make the mentor say wrong or rude things | No tools, all policy server-side, every message tagged AI-generated |
 | RR4 | Source pages can change after verification | 30-day staleness + nightly re-check; we show "read on DATE" |
 | RR5 | Similarity-based solution detection has false negatives (paraphrased solutions) | Hint ladder + code-length filter reduce it; perfect detection impossible |
@@ -211,3 +226,4 @@ Revision 2 status: items 1–8 resolved by approved decisions — 1 → D-17/X-0
 | RR7 | OWASP category lists cited from memory | Marked UNVERIFIED; X-15 live check is a P7 exit condition |
 | RR8 | A sandbox *subdomain* is same-site with the app (cross-origin, but `SameSite=Lax` treats it as same-site) | Cookies are host-only and never sent to it, it serves only static files, and its results can't count; a separate registrable domain would remove this (Q21) |
 | RR9 | `safeFetch` blocklist misses a future special-use range | Ranges kept in one constant with a test per range; reviewed with dependency updates |
+| RR10 | Better Auth's token encryption has no AAD, so its ciphertexts are not bound to a row | Single account by design; DB write access is already full compromise; our own scheme (§3a) does bind with AAD |

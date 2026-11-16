@@ -9,7 +9,7 @@ cat > .env <<ENV
 ATLAS_ENV=development
 APP_ORIGIN=http://localhost:3000
 SANDBOX_ORIGIN=http://127.0.0.1:3000
-# Harison's GitHub numeric user id (owner of harisonharold/sloane, read from the GitHub API on 2026-11-16).
+# Harison's GitHub numeric user id (owner of harisonharold/AI-Learning-Path, read from the GitHub API on 2026-11-16).
 ALLOWED_GITHUB_USER_ID=123658133
 MYSQL_ROOT_PASSWORD=$(rand 24 hex)
 MYSQL_APP_PASSWORD=$(rand 24 hex)

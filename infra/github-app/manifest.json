@@ -1,6 +1,6 @@
 {
   "name": "Systems Atlas (private)",
-  "url": "http://localhost:3000",
+  "url": "https://github.com/harisonharold/AI-Learning-Path",
   "description": "Personal learning platform. Read-only: it never opens pull requests, comments, or writes anything to GitHub.",
   "public": false,
   "callback_urls": ["http://localhost:3000/api/auth/callback/github"],
