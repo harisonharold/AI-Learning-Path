@@ -16,7 +16,7 @@ Status: **Revision 2 — approved with changes 2026-11-16** (practice checks, al
 
 | Table | Columns (key ones) | Keys / indexes | Notes |
 |---|---|---|---|
-| `user`, `session`, `account`, `verification` | Better Auth standard | Better Auth defaults; UNIQUE(`account.providerId`, `account.accountId`) | Owned by `modules/auth` (PLAN D-13). Generated via Better Auth's Drizzle schema output (D-05). `account.accessToken/refreshToken` encrypted by a hook **[Δ]** (plaintext by default). Rows are created **only** for the GitHub numeric id in `ALLOWED_GITHUB_USER_ID` (D-08): the create hook rejects before insert, so a rejected sign-up leaves no row. Session cookie is host-only (no `Domain`) so `SANDBOX_ORIGIN` never receives it (D-14) |
+| `user`, `session`, `account`, `verification` | Better Auth standard | Better Auth defaults; UNIQUE(`account.providerId`, `account.accountId`) | Owned by `modules/auth` (PLAN D-13). Hand-written in Drizzle to mirror better-auth 1.7.25 (PLAN D-36). `account.accessToken/refreshToken` encrypted with `encryptOAuthTokens` **[Δ]** (PLAN D-25). Rows are created **only** for the GitHub numeric id in `ALLOWED_GITHUB_USER_ID` (D-08): the create hook rejects before insert, so a rejected sign-up leaves no row. Session cookie is host-only (no `Domain`) so `SANDBOX_ORIGIN` never receives it (D-14) |
 | `profiles` **[Δ]** | `user_id PK FK`, `handle VARCHAR(39) UNIQUE`, `display_name`, `bio` | UNIQUE(handle) | Needed by `/p/:handle` |
 | `user_roles` **[Δ]** | `user_id FK`, `role ENUM('learner','reviewer','admin')` | PK(user_id, role) | C.2 roles; admin is a separate flag on the same person |
 | `user_settings` **[Δ]** | `user_id PK FK`, `mode ENUM('ACC','RI')`, `hours_per_week TINYINT` (20/30/40/50), `timezone VARCHAR(64) DEFAULT 'America/Toronto'`, `theme`, `sample_data BOOLEAN DEFAULT FALSE`, `ai_provider ENUM('none','anthropic') DEFAULT 'none'`, `ai_model VARCHAR(80)`, `a11y_pause_timers BOOLEAN` | PK | G §4 `GET/PUT /api/settings` had no table |
@@ -136,7 +136,7 @@ Redis holds no secrets and no record whose loss changes evidence; losing it only
 | 12 | `interview_sessions`, `writing_drafts`, `portfolio_items.evidence_verified_at` | AT-38, AT-41, AT-39 |
 | 13 | `jobs.user_id`, `jobs.attempts`; `audit_log.ip_hash` | Authz on job listing, retry count (D.7 max 5), forensic trace without storing raw IPs |
 | 14 | `is_mock` on attempts, projects, runs, papers, contributions | G §0.5 says "records carry is_mock"; G §3 only had it on runs |
-| 15 | Better Auth `account` tokens encrypted at rest | G §0.8/FR-17 "tokens encrypted at rest"; Better Auth stores them plaintext by default |
+| 15 | Better Auth `account` tokens encrypted at rest — implemented with Better Auth's `encryptOAuthTokens` (XChaCha20-Poly1305), see PLAN D-25 | G §0.8/FR-17 "tokens encrypted at rest"; Better Auth stores them plaintext by default |
 | 16 | `attempts.status` gains `practice`; `attempts.source` gains `server`; two CHECK constraints tie `browser` ⇔ `practice` | Approved fix: browser tests can't be hidden, so they are practice checks and must be impossible to count (D-15, X-13) |
 | 17 | `attempt_evidence.kind` enum + generated `counts` column | Makes "counting evidence = server-side or atlas-lab only" a data rule, not just service logic |
 | 18 | `exercises.practice_runtime`, `gate_tests_ref` replace a single `runtime` | Public practice tests (sandbox origin) are separated from gate test bundles (atlas-lab only) |

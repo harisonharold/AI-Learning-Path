@@ -1,0 +1,21 @@
+# CI/e2e overlay: adds the in-repo mock GitHub OAuth server (test-only, not a product container) and
+# points the web container at it. ATLAS_ENV=test is the only mode in which these overrides are accepted.
+services:
+  mock-github:
+    image: node:22-alpine
+    working_dir: /mock
+    command: ["node", "server.ts"]
+    volumes: ["../../tests/support/mock-github-oauth:/mock:ro"]
+    networks: [internal]
+    ports: ["127.0.0.1:4010:4010"]
+  web:
+    environment:
+      ATLAS_ENV: test
+      AUTH_RATE_LIMIT_MAX: "1000"
+      AUTH_SIGNIN_RATE_LIMIT_MAX: "1000"
+      GITHUB_APP_CLIENT_ID: Iv1.mockclient
+      GITHUB_APP_CLIENT_SECRET: mock-client-secret
+      GITHUB_OAUTH_AUTHORIZE_URL: http://localhost:4010/login/oauth/authorize
+      GITHUB_OAUTH_TOKEN_URL: http://mock-github:4010/login/oauth/access_token
+      GITHUB_API_URL: http://mock-github:4010/api
+    depends_on: [mock-github]

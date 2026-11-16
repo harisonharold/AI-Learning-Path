@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systems-atlas.local/schemas/job-message.schema.json",
+  "title": "BullMQ job data produced by web",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jobId", "kind", "input"],
+  "properties": {
+    "jobId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "kind": { "enum": ["diag.echo"] },
+    "input": { "type": "object" }
+  }
+}

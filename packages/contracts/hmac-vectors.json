@@ -1,0 +1,38 @@
+{
+  "key": "test-key-0123456789abcdef0123456789abcdef",
+  "algorithm": "hex(HMAC-SHA256(key, METHOD\\npath\\ntimestamp\\nnonce\\nhex(sha256(body))))",
+  "vectors": [
+    {
+      "method": "POST",
+      "path": "/api/internal/jobs/0b6f7c2e-8c1a-4f0e-9b53-2a7d1e9c4f10/result",
+      "timestamp": "1763300000",
+      "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
+      "body": "{\"status\":\"done\",\"attempts\":1}",
+      "signature": "8148c24785e4630a77af66cca1c2d6ae86bf34efa213759711a36b9589553c7b"
+    },
+    {
+      "method": "POST",
+      "path": "/diag/echo",
+      "timestamp": "1763300123",
+      "nonce": "nonce_with-dash_123456",
+      "body": "{\"message\":\"ping\"}",
+      "signature": "8918f48ec2c6e7501d788ae784311ca1c2b9e462271358da67907eccc3170338"
+    },
+    {
+      "method": "get",
+      "path": "/healthz",
+      "timestamp": "0",
+      "nonce": "zzzzzzzzzzzzzzzz",
+      "body": "",
+      "signature": "6b2981e0f51225d299479daf804872f46018aa71170bf255b78e779c61573d39"
+    },
+    {
+      "method": "POST",
+      "path": "/x",
+      "timestamp": "1763300000",
+      "nonce": "AAAAAAAAAAAAAAAAAAAAAA",
+      "body": "{\"msg\":\"café ✓\"}",
+      "signature": "3fc4af41ec365f1f1637086b7cf552a65c18539d9bcfa334f74f85517a531cc0"
+    }
+  ]
+}

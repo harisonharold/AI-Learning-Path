@@ -1,0 +1,47 @@
+/*
+ * "Lab notebook meets oscilloscope" (E.1). Every fg/bg pair used for text is checked >= 4.5:1
+ * and UI borders/focus >= 3:1 by packages/ui/tests/contrast.test.ts, in both themes.
+ */
+:root {
+  --bg: #f7f4ec;            /* warm off-white */
+  --surface: #fffdf7;
+  --surface-2: #ede8dc;
+  --ink: #1b1a17;           /* near-black */
+  --ink-muted: #55524a;
+  --border: #7d7869;
+  --focus: #1f5fbf;
+  --accent: #1f6b3a;        /* phosphor green, darkened for light bg */
+  --accent-ink: #ffffff;
+  --amber: #8a5a00;
+  --verified: #1f6b3a;
+  --self: #1f4f99;
+  --ai: #6a3fa0;
+  --mock: #7a5200;
+  --mock-bg: #fff3d6;
+  --stale: #a14a00;
+  --danger: #a3261d;
+  --radius: 6px;
+  --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --surface: #1c1f23; --surface-2: #262a2f; --ink: #e8e6df; --ink-muted: #a9a69c;
+    --border: #6f747b; --focus: #7cb7ff; --accent: #5fe08a; --accent-ink: #0b1a10; --amber: #f2b648;
+    --verified: #5fe08a; --self: #8fb8ff; --ai: #c7a2ff; --mock: #f2b648; --mock-bg: #2e2412; --stale: #ff9a4d; --danger: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --surface: #1c1f23; --surface-2: #262a2f; --ink: #e8e6df; --ink-muted: #a9a69c;
+  --border: #6f747b; --focus: #7cb7ff; --accent: #5fe08a; --accent-ink: #0b1a10; --amber: #f2b648;
+  --verified: #5fe08a; --self: #8fb8ff; --ai: #c7a2ff; --mock: #f2b648; --mock-bg: #2e2412; --stale: #ff9a4d; --danger: #ff8a80;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
