@@ -1,0 +1,21 @@
+id: ex-w01-log-levels
+week: RI-W01
+gate: g-w01
+title: "Count log levels"
+language: python
+practice_runtime: pyodide
+gate_tests_ref: "atlas-lab:w01@1"
+prompt: |
+  Write `count_levels(lines)` that takes an iterable of log lines such as
+  `2026-11-16T10:00:00Z ERROR disk full` and returns a dict mapping each level
+  (`DEBUG`, `INFO`, `WARN`, `ERROR`) to how many lines have it. Ignore lines that
+  have no recognised level in the second field. Levels are case-sensitive.
+starter: |
+  def count_levels(lines):
+      counts = {}
+      # your code here
+      return counts
+hints:
+  - "Concept: split each line on whitespace; the level is the second field."
+  - "Location: guard against lines with fewer than two fields before indexing."
+  - "Pseudo-code: for each line -> parts = line.split(); if len(parts) > 1 and parts[1] in LEVELS: counts[level] = counts.get(level, 0) + 1"

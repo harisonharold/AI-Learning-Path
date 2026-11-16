@@ -1,0 +1,525 @@
+# Curriculum (spec B.2 / B.3 / H.3). Loaded by apps/web/modules/learning/internal/content.ts and validated with Zod.
+# Gates belong to Research-Intensive (RI) weeks; Accelerated (ACC) weeks reuse them ("gates stay the same", G §7).
+# Evidence kinds: runner_result (atlas-lab, P2), server_graded (answer key server-side), github_commit, github_ci,
+# reviewer_score, self_rubric (labelled "self-assessed"), report, recording. Browser practice checks never count (D-15).
+content_version: "2026-11-16.p1"
+
+skills:
+  - { id: py-tooling,        name: "Python, Git and Linux tooling",          area: foundations }
+  - { id: c-memory,          name: "C and memory",                           area: foundations }
+  - { id: caches-arch,       name: "CPU caches and architecture",            area: foundations }
+  - { id: os,                name: "Processes, virtual memory, scheduling",  area: foundations }
+  - { id: concurrency,       name: "Concurrency and memory ordering",        area: foundations }
+  - { id: networking,        name: "Networking and latency measurement",     area: foundations }
+  - { id: go-dsa,            name: "Go and data structures",                 area: foundations }
+  - { id: db-internals,      name: "Database internals",                     area: foundations }
+  - { id: perf-diagnosis,    name: "Diagnosing performance bottlenecks",     area: foundations }
+  - { id: rpc-mapreduce,     name: "Time, failure, RPC, MapReduce",          area: distributed }
+  - { id: raft,              name: "Consensus with Raft",                    area: distributed }
+  - { id: consistency,       name: "Replication and consistency models",     area: distributed }
+  - { id: sharding-txn,      name: "Sharding and distributed transactions",  area: distributed }
+  - { id: numerics,          name: "Linear algebra, numerics, autograd",     area: gpu-ml }
+  - { id: cuda-basics,       name: "GPU architecture and CUDA I",            area: gpu-ml }
+  - { id: cuda-opt,          name: "CUDA optimization and roofline",         area: gpu-ml }
+  - { id: triton,            name: "Triton and PyTorch performance",         area: gpu-ml }
+  - { id: inference,         name: "Transformer inference fundamentals",     area: gpu-ml }
+  - { id: serving,           name: "LLM serving systems",                    area: ai-infra }
+  - { id: dist-training,     name: "Distributed training and communication", area: ai-infra }
+  - { id: prod-infra,        name: "Production infrastructure",              area: ai-infra }
+  - { id: inference-opt,     name: "Quantization, speculative decoding, energy", area: ai-infra }
+  - { id: research,          name: "Research critique and reproduction",     area: research }
+  - { id: capstone,          name: "Capstone and first open-source PR",      area: research }
+  - { id: defense,           name: "Publishing and defending design",        area: research }
+
+# [prerequisite, dependant]: a week is locked until every prerequisite skill of its skills is passed.
+skill_edges:
+  - [py-tooling, c-memory]
+  - [c-memory, caches-arch]
+  - [c-memory, os]
+  - [os, concurrency]
+  - [concurrency, networking]
+  - [py-tooling, go-dsa]
+  - [concurrency, db-internals]
+  - [caches-arch, db-internals]
+  - [db-internals, perf-diagnosis]
+  - [go-dsa, rpc-mapreduce]
+  - [networking, rpc-mapreduce]
+  - [rpc-mapreduce, raft]
+  - [raft, consistency]
+  - [consistency, sharding-txn]
+  - [db-internals, sharding-txn]
+  - [py-tooling, numerics]
+  - [numerics, cuda-basics]
+  - [caches-arch, cuda-basics]
+  - [cuda-basics, cuda-opt]
+  - [cuda-opt, triton]
+  - [numerics, inference]
+  - [inference, serving]
+  - [numerics, dist-training]
+  - [networking, dist-training]
+  - [consistency, prod-infra]
+  - [serving, inference-opt]
+  - [serving, research]
+  - [research, capstone]
+  - [prod-infra, capstone]
+  - [capstone, defense]
+
+# Hard rule (G §6.1): weeks with ordinal >= 18 stay locked until both of these exam gates pass.
+advanced_from_ri_week: 18
+advanced_requires_gates: [g-w12-exam, g-w15-exam]
+
+ri_weeks:
+  - id: RI-W01
+    ordinal: 1
+    title: "Python, Git, Linux tooling"
+    hardware: CPU
+    skills: [py-tooling]
+    no_ai_code: true
+    gates:
+      - id: g-w01
+        kind: tests
+        title: "Tested CLI log analyzer + bisect lab + retrieval quiz"
+        objective: "atlas-lab runs the hidden test suite for the CLI log analyzer and the git-bisect lab; the 10-question retrieval quiz scores at least 80%."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: CLI log analyzer hidden tests + bisect lab", ref: "atlas-lab:w01@1" }
+          - { kind: server_graded, label: "Retrieval quiz, at least 80%", quiz: q-w01, pass_pct: 80 }
+  - id: RI-W02
+    ordinal: 2
+    title: "C and memory"
+    hardware: CPU
+    skills: [c-memory]
+    no_ai_code: true
+    gates:
+      - id: g-w02
+        kind: tests
+        title: "ASan/UBSan-clean allocator + memory-bug write-up"
+        objective: "atlas-lab runs the test suite under ASan and UBSan with no findings; a written explanation of one memory bug is scored with the rubric."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: allocator tests under ASan/UBSan", ref: "atlas-lab:w02@1" }
+          - { kind: report, label: "Memory-bug write-up (link to REPORT.md at a commit)" }
+        rubric:
+          - { criterion: "Bug identified precisely", }
+          - { criterion: "Root cause in terms of memory layout" }
+          - { criterion: "Fix and how it was verified" }
+  - id: RI-W03
+    ordinal: 3
+    title: "Computer architecture and CPU caches"
+    hardware: CPU
+    skills: [caches-arch]
+    no_ai_code: true
+    gates:
+      - id: g-w03
+        kind: tests
+        title: "Blocked matmul at least 3x naive + roofline"
+        objective: "On your own machine at N=1024, blocked matmul is at least 3x faster than naive (relative target), and each variant is placed correctly on your measured roofline."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: matmul speedup >= 3x at N=1024", ref: "atlas-lab:w03@1" }
+          - { kind: report, label: "Roofline placement report (REPORT.md with plots)" }
+        rubric:
+          - { criterion: "Peak bandwidth and FLOP/s measured, method stated" }
+          - { criterion: "Each variant placed correctly on the roofline" }
+          - { criterion: "Explanation of the limiter for each variant" }
+  - id: RI-W04
+    ordinal: 4
+    title: "Operating systems: processes, virtual memory, scheduling"
+    hardware: CPU
+    skills: [os]
+    no_ai_code: true
+    gates:
+      - id: g-w04
+        kind: tests
+        title: "xv6 util + syscall graders + virtual-memory quiz"
+        objective: "The xv6 util and syscall lab graders pass; virtual-memory quiz passes."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: xv6 util + syscall graders", ref: "atlas-lab:w04@1" }
+          - { kind: server_graded, label: "Virtual-memory quiz, at least 80%", quiz: q-w04, pass_pct: 80 }
+  - id: RI-W05
+    ordinal: 5
+    title: "Concurrency"
+    hardware: CPU
+    skills: [concurrency]
+    no_ai_code: true
+    gates:
+      - id: g-w05-exam
+        kind: exam
+        title: "Exam: implement concurrency primitives"
+        objective: "Hidden stress tests pass under ThreadSanitizer."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: hidden stress tests under TSan", ref: "atlas-lab:w05-exam@1" }
+          - { kind: report, label: "Written memory-ordering justification" }
+        rubric:
+          - { criterion: "Correctness under contention" }
+          - { criterion: "Memory-ordering justification" }
+          - { criterion: "Deadlock-freedom argument" }
+          - { criterion: "Test quality" }
+        remediation:
+          track: "Re-read the OSTEP concurrency chapters; 3 extra primitive drills with TSan."
+          reattempt_after_hours: 48
+          reattempt_note: "A new hidden test set is used on the next attempt."
+  - id: RI-W06
+    ordinal: 6
+    title: "Networking and latency measurement"
+    hardware: CPU
+    skills: [networking]
+    no_ai_code: true
+    gates:
+      - id: g-w06
+        kind: tests
+        title: "Conforming HTTP server + latency report with CIs"
+        objective: "The server passes conformance tests; the latency report states its method and gives p50/p95/p99 with confidence intervals."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: HTTP conformance tests", ref: "atlas-lab:w06@1" }
+          - { kind: report, label: "Latency report with method and CIs" }
+        rubric:
+          - { criterion: "Method stated (tool, load, warm-up, N)" }
+          - { criterion: "Percentiles with confidence intervals" }
+          - { criterion: "Tail behaviour explained" }
+  - id: RI-W07
+    ordinal: 7
+    title: "Go and data structures"
+    hardware: CPU
+    skills: [go-dsa]
+    no_ai_code: true
+    gates:
+      - id: g-w07
+        kind: tests
+        title: "Gossip Glomers 1-3 + timed problems"
+        objective: "Maelstrom checks pass for challenges 1-3, plus 6 timed data-structure problems."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: Maelstrom checks 1-3 + timed problems", ref: "atlas-lab:w07@1" }
+  - id: RI-W08
+    ordinal: 8
+    title: "Database internals"
+    hardware: CPU
+    skills: [db-internals, perf-diagnosis]
+    no_ai_code: true
+    publish_restricted: true
+    restriction_note: "CMU 15-445 prohibits coding agents on P1-P2 and may ask students not to publish solutions. Publish write-ups, not solution code."
+    gates:
+      - id: g-w08
+        kind: tests
+        title: "BusTub P1 + eviction trade-offs"
+        objective: "BusTub Project 1 local tests pass; explanation of eviction-policy trade-offs is scored with the rubric."
+        skills: [db-internals]
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: BusTub P1 local tests", ref: "atlas-lab:w08@1" }
+          - { kind: report, label: "Eviction-policy trade-offs write-up" }
+        rubric:
+          - { criterion: "LRU-K behaviour explained with an example" }
+          - { criterion: "Trade-offs against other policies" }
+      - id: g-w08-exam
+        kind: exam
+        title: "Exam: diagnose a performance bottleneck"
+        objective: "The fixed service meets the stated latency target."
+        skills: [perf-diagnosis]
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: fixed service meets latency target", ref: "atlas-lab:w08-exam@1" }
+          - { kind: report, label: "Diagnosis report with before/after CIs" }
+        rubric:
+          - { criterion: "Hypothesis to measurement loop" }
+          - { criterion: "Correct tool use (perf, pprof, flame graph)" }
+          - { criterion: "Root cause stated" }
+          - { criterion: "Fix verified with before/after CIs" }
+  - id: RI-W09
+    ordinal: 9
+    title: "Time, failure, RPC, MapReduce"
+    hardware: CPU
+    skills: [rpc-mapreduce]
+    no_ai_code: true
+    publish_restricted: true
+    restriction_note: "Follow MIT 6.5840's collaboration policy: publish write-ups, not lab solutions, if the course asks."
+    gates:
+      - id: g-w09
+        kind: tests
+        title: "6.5840 Labs 1-2, 20/20 runs"
+        objective: "Lab test suites pass 20 of 20 runs; flakiness counts as failure."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: Labs 1-2 x20", ref: "atlas-lab:w09@1" }
+  - id: RI-W10
+    ordinal: 10
+    title: "Consensus: Raft"
+    hardware: CPU
+    skills: [raft]
+    no_ai_code: true
+    publish_restricted: true
+    restriction_note: "Follow MIT 6.5840's collaboration policy: publish write-ups, not lab solutions, if the course asks."
+    gates:
+      - id: g-w10
+        kind: tests
+        title: "6.5840 Lab 3, 100 consecutive passes"
+        objective: "Lab 3 tests pass 100 consecutive runs; written answer on committing only current-term entries by counting replicas."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: Lab 3 x100", ref: "atlas-lab:w10@1" }
+          - { kind: report, label: "Written answer: why a leader commits only current-term entries by counting" }
+        remediation:
+          track: "Planted-bug Raft debugging set + log-reading drill."
+          reattempt_after_hours: 0
+          reattempt_note: "Any time; must pass 100 runs."
+  - id: RI-W11
+    ordinal: 11
+    title: "Replication and consistency models"
+    hardware: CPU
+    skills: [consistency]
+    no_ai_code: true
+    publish_restricted: true
+    restriction_note: "Follow MIT 6.5840's collaboration policy: publish write-ups, not lab solutions, if the course asks."
+    gates:
+      - id: g-w11-exam
+        kind: exam
+        title: "Exam: explain consistency trade-offs"
+        objective: "Linearizability check (porcupine) passes on your KV history; 5 scenario questions graded by rubric."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: linearizability check on KV history", ref: "atlas-lab:w11-exam@1" }
+          - { kind: report, label: "Answers to the 5 scenario questions" }
+        rubric:
+          - { criterion: "Correct model per scenario" }
+          - { criterion: "Anomaly examples" }
+          - { criterion: "Cost (latency/availability) reasoning" }
+          - { criterion: "CAP/PACELC used correctly" }
+  - id: RI-W12
+    ordinal: 12
+    title: "Sharding and distributed transactions"
+    hardware: CPU
+    skills: [sharding-txn]
+    no_ai_code: true
+    publish_restricted: true
+    restriction_note: "Follow MIT 6.5840's collaboration policy: publish write-ups, not lab solutions, if the course asks."
+    gates:
+      - id: g-w12-exam
+        kind: exam
+        title: "Exam: debug a broken distributed system"
+        objective: "At least 2 of 3 planted bugs fixed; regression tests fail before and pass after each fix."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: regression tests before/after", ref: "atlas-lab:w12-exam@1" }
+          - { kind: report, label: "Postmortem + design doc defending one choice" }
+        rubric:
+          - { criterion: "Bugs found" }
+          - { criterion: "Fixes minimal" }
+          - { criterion: "Tests" }
+          - { criterion: "Written postmortem" }
+  - id: RI-W13
+    ordinal: 13
+    title: "Linear algebra, numerics, tiny autograd"
+    hardware: CPU
+    skills: [numerics]
+    gates:
+      - id: g-w13
+        kind: tests
+        title: "Gradient check + FLOP worksheet"
+        objective: "Gradient check passes; FLOP-count worksheet within 5% of the reference."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: gradient check + worksheet", ref: "atlas-lab:w13@1" }
+  - id: RI-W14
+    ordinal: 14
+    title: "GPU architecture and CUDA I"
+    hardware: GPU_FREE
+    skills: [cuda-basics]
+    gates:
+      - id: g-w14
+        kind: tests
+        title: "Reduction kernels + bandwidth report"
+        objective: "Correctness tests pass; bandwidth report states its method."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: reduction correctness (GPU)", ref: "atlas-lab:w14@1" }
+          - { kind: report, label: "Effective-bandwidth report with method" }
+  - id: RI-W15
+    ordinal: 15
+    title: "CUDA optimization and roofline"
+    hardware: GPU_FREE
+    skills: [cuda-opt]
+    gates:
+      - id: g-w15-exam
+        kind: exam
+        title: "Exam: optimize a small GPU kernel"
+        objective: "SGEMM reaches at least 50% of cuBLAS on the same GPU at N=4096 (relative target), with correctness tests."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: SGEMM >= 50% of cuBLAS + correctness", ref: "atlas-lab:w15-exam@1" }
+          - { kind: report, label: "Nsight Compute evidence + roofline placement" }
+        rubric:
+          - { criterion: "Profiling evidence" }
+          - { criterion: "Roofline placement" }
+          - { criterion: "Explanation of limiter" }
+          - { criterion: "Method" }
+        remediation:
+          track: "GPU-Puzzles remainder + Boehm worklog steps 1-3."
+          reattempt_after_hours: 0
+          reattempt_note: "A new matrix size is used on the next attempt."
+  - id: RI-W16
+    ordinal: 16
+    title: "Triton and PyTorch performance"
+    hardware: GPU_FREE
+    skills: [triton]
+    gates:
+      - id: g-w16
+        kind: tests
+        title: "Triton kernels vs PyTorch reference"
+        objective: "Fused softmax and simplified FlashAttention forward pass tests against the PyTorch reference (stated atol); perf report."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: Triton kernels vs reference", ref: "atlas-lab:w16@1" }
+          - { kind: report, label: "Performance report" }
+  - id: RI-W17
+    ordinal: 17
+    title: "Transformer inference fundamentals"
+    hardware: CPU
+    skills: [inference]
+    gates:
+      - id: g-w17
+        kind: tests
+        title: "KV cache exact match + memory-bound decode analysis"
+        objective: "KV-cache implementation matches no-cache outputs exactly (greedy); report on memory-bound decode with arithmetic-intensity math."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: KV-cache exact match", ref: "atlas-lab:w17@1" }
+          - { kind: report, label: "Memory-bound decode analysis" }
+  - id: RI-W18
+    ordinal: 18
+    title: "LLM serving systems"
+    hardware: GPU_RENT
+    skills: [serving]
+    gates:
+      - id: g-w18
+        kind: report
+        title: "Reproduce the direction of a published serving claim"
+        objective: "Your own numbers reproduce the direction of one published claim, with a confounder list."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: Vidur simulation + vLLM sweep runs", ref: "atlas-lab:w18@1" }
+          - { kind: report, label: "Reproduction report with confounders" }
+  - id: RI-W19
+    ordinal: 19
+    title: "Distributed training and GPU communication"
+    hardware: CPU
+    skills: [dist-training]
+    gates:
+      - id: g-w19
+        kind: tests
+        title: "Ring all-reduce on gloo + alpha-beta model"
+        objective: "Your ring all-reduce passes correctness tests; the alpha-beta model predicts measured time within a stated error."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: ring all-reduce tests + timing", ref: "atlas-lab:w19@1" }
+  - id: RI-W20
+    ordinal: 20
+    title: "Production infrastructure"
+    hardware: CPU
+    skills: [prod-infra]
+    gates:
+      - id: g-w20-exam
+        kind: exam
+        title: "Exam: analyze distributed traces"
+        objective: "Names the slow span and the retry amplification factor; deployment reproducible from make up."
+        required_evidence:
+          - { kind: server_graded, label: "Trace exam answers", quiz: q-w20-exam, pass_pct: 100 }
+          - { kind: github_commit, label: "Deployment repo at a commit (make up)" }
+        rubric:
+          - { criterion: "Critical path" }
+          - { criterion: "Evidence from spans" }
+          - { criterion: "Proposed fix" }
+          - { criterion: "SLO impact" }
+  - id: RI-W21
+    ordinal: 21
+    title: "Inference optimization: quantization, speculative decoding, energy"
+    hardware: GPU_RENT
+    skills: [inference-opt]
+    gates:
+      - id: g-w21
+        kind: report
+        title: "Quality-latency-memory Pareto chart"
+        objective: "Pareto chart with method and limitations."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: quantization runs", ref: "atlas-lab:w21@1" }
+          - { kind: report, label: "Pareto report with method and limitations" }
+  - id: RI-W22
+    ordinal: 22
+    title: "Research dossier and reproduction"
+    hardware: GPU_RENT
+    skills: [research]
+    gates:
+      - id: g-w22-critique
+        kind: exam
+        title: "Exam: evaluate a research paper critically"
+        objective: "Rubric-graded critique."
+        required_evidence:
+          - { kind: report, label: "Paper critique" }
+        rubric:
+          - { criterion: "Claims vs evidence" }
+          - { criterion: "Missing baselines" }
+          - { criterion: "Threats to validity" }
+          - { criterion: "Proposed test" }
+        remediation:
+          track: "Two guided critiques with model answers revealed after submission."
+          reattempt_after_hours: 0
+          reattempt_note: "A new paper is used on the next attempt."
+      - id: g-w22-repro
+        kind: exam
+        title: "Exam: reproduce published results"
+        objective: "Reproduction package re-runs."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: reproduction package re-run", ref: "atlas-lab:w22-repro@1" }
+          - { kind: report, label: "Reproduction report with config hashes" }
+        rubric:
+          - { criterion: "Direction reproduced or honestly not" }
+          - { criterion: "Config/env captured" }
+          - { criterion: "CIs" }
+          - { criterion: "Confounders" }
+  - id: RI-W23
+    ordinal: 23
+    title: "Capstone build and first open-source PR"
+    hardware: CPU
+    skills: [capstone]
+    gates:
+      - id: g-w23
+        kind: tests
+        title: "Capstone tests + chaos test + PR opened by you"
+        objective: "Capstone test suite and chaos test pass; one PR opened by you to a target repo (merge not required)."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: capstone suite + chaos test", ref: "atlas-lab:w23@1" }
+          - { kind: github_ci, label: "Capstone CI passing (verified via GitHub API)" }
+  - id: RI-W24
+    ordinal: 24
+    title: "Publish and defend"
+    hardware: CPU
+    skills: [defense]
+    gates:
+      - id: g-w24-design
+        kind: exam
+        title: "Exam: design a fault-tolerant service"
+        objective: "Chaos test on the capstone; system design document."
+        required_evidence:
+          - { kind: runner_result, label: "atlas-lab: capstone chaos test", ref: "atlas-lab:w24-design@1" }
+          - { kind: report, label: "System design document" }
+        rubric:
+          - { criterion: "Failure model" }
+          - { criterion: "Replication/consistency choice" }
+          - { criterion: "Detection/recovery" }
+          - { criterion: "Capacity math" }
+      - id: g-w24-defense
+        kind: defense
+        title: "Exam: defend engineering design decisions"
+        objective: "45-minute recorded defense graded by rubric."
+        required_evidence:
+          - { kind: recording, label: "Recorded defense (reference only; the file stays local)" }
+        rubric:
+          - { criterion: "Alternatives considered" }
+          - { criterion: "Trade-offs with numbers" }
+          - { criterion: "Answers to challenges" }
+          - { criterion: "Admits limits" }
+
+# Accelerated mode (G §7): merged weeks; W21 and Rust optional.
+acc_weeks:
+  - { id: ACC-01, ordinal: 1,  title: "Python, Git, Linux",                         ri: [RI-W01] }
+  - { id: ACC-02, ordinal: 2,  title: "C, memory, caches",                          ri: [RI-W02, RI-W03] }
+  - { id: ACC-03, ordinal: 3,  title: "OS and concurrency",                         ri: [RI-W04, RI-W05] }
+  - { id: ACC-04, ordinal: 4,  title: "Networking and Go",                          ri: [RI-W06, RI-W07] }
+  - { id: ACC-05, ordinal: 5,  title: "Database internals",                         ri: [RI-W08] }
+  - { id: ACC-06, ordinal: 6,  title: "Clocks, RPC, MapReduce",                     ri: [RI-W09] }
+  - { id: ACC-07, ordinal: 7,  title: "Raft",                                       ri: [RI-W10] }
+  - { id: ACC-08, ordinal: 8,  title: "Replication, consistency, transactions",     ri: [RI-W11, RI-W12] }
+  - { id: ACC-09, ordinal: 9,  title: "Numerics and GPU architecture",              ri: [RI-W13, RI-W14] }
+  - { id: ACC-10, ordinal: 10, title: "CUDA optimization and roofline",             ri: [RI-W15] }
+  - { id: ACC-11, ordinal: 11, title: "Triton and inference fundamentals",          ri: [RI-W16, RI-W17] }
+  - { id: ACC-12, ordinal: 12, title: "Serving systems",                            ri: [RI-W18] }
+  - { id: ACC-13, ordinal: 13, title: "Distributed training and comms",             ri: [RI-W19] }
+  - { id: ACC-14, ordinal: 14, title: "Production infrastructure",                  ri: [RI-W20] }
+  - { id: ACC-15, ordinal: 15, title: "Capstone stages 1-3 and PR prep",            ri: [RI-W22, RI-W23] }
+  - { id: ACC-16, ordinal: 16, title: "Publish and defend",                         ri: [RI-W24] }
+
+# Planning estimates (B.1), not measured data.
+hours_estimate: { RI: 960, ACC: 800 }
