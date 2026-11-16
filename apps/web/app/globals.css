@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@import "../../../packages/ui/src/tokens.css";
+@source "../../../packages/ui/src";
+
+@theme inline {
+  --font-serif: var(--font-serif);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+html { background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
+body { min-height: 100vh; background: var(--bg); }
+h1, h2, h3 { font-family: var(--font-serif); }
+code, kbd, pre, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.prose-width { max-width: 72ch; }
+a { color: var(--accent); text-underline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 2px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+.btn { display: inline-flex; align-items: center; gap: .5rem; min-height: 2.25rem; min-width: 24px; padding: .375rem .875rem;
+  border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-weight: 500;
+  transition: background-color 180ms ease-out; cursor: pointer; }
+.btn:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent); filter: brightness(1.08); }
+.btn-danger { color: var(--danger); border-color: var(--danger); }
+.skeleton { background: var(--surface-2); border-radius: var(--radius); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .55; } }
+.mock-banner { background: repeating-linear-gradient(135deg, var(--mock-bg) 0 12px, transparent 12px 24px), var(--mock-bg);
+  color: var(--mock); border: 1px solid var(--mock); padding: .5rem 1rem; border-radius: var(--radius); }
+.skip-link { position: absolute; left: -9999px; top: .5rem; z-index: 100; }
+.skip-link:focus { left: .5rem; background: var(--surface); padding: .5rem 1rem; }
+kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 .35rem; font-size: .8em; }

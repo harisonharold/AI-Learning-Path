@@ -1,0 +1,30 @@
+# Production overlay for one VM (PLAN D-03): Caddy replaces Jaeger; no internal service publishes a port.
+# docker compose -f compose.yaml -f compose.prod.yaml up -d
+services:
+  jaeger: !reset null
+  mysql:
+    ports: !reset []
+  web:
+    ports: !reset []
+    environment:
+      ATLAS_ENV: production
+    networks: [internal, edge]
+  caddy:
+    image: caddy:2.10-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      APP_HOST: ${APP_HOST:?}
+      SANDBOX_HOST: ${SANDBOX_HOST:?}
+      APP_ORIGIN: https://${APP_HOST}
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../apps/web/public/sandbox:/srv/sandbox:ro
+      - caddy-data:/data
+    networks: [edge]
+    depends_on: [web]
+
+networks:
+  edge: {}
+
+volumes:
+  caddy-data: {}

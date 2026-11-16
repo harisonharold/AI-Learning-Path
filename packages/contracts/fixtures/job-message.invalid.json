@@ -1,0 +1,1 @@
+[{ "jobId": "not-a-uuid", "kind": "diag.echo", "input": {} }, { "jobId": "0b6f7c2e-8c1a-4f0e-9b53-2a7d1e9c4f10", "kind": "rm -rf", "input": {} }, { "jobId": "0b6f7c2e-8c1a-4f0e-9b53-2a7d1e9c4f10", "kind": "diag.echo", "input": {}, "extra": 1 }]

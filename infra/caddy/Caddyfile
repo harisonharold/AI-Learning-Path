@@ -1,0 +1,20 @@
+# Production edge (PLAN D-14, T-W5). TLS is automatic.
+{$APP_HOST} {
+	# Internal callbacks are never reachable from the internet (X-02); HMAC is still required behind this.
+	@internal path /api/internal/*
+	respond @internal 404
+	@sandbox path /sandbox/*
+	respond @sandbox 404
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy web:3000
+}
+
+# Static Pyodide runner only: never proxied to web, so no /api and no cookies exist here.
+{$SANDBOX_HOST} {
+	@notsandbox not path /sandbox/*
+	respond @notsandbox 404
+	header -Set-Cookie
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; frame-ancestors {$APP_ORIGIN}; object-src 'none'; base-uri 'none'"
+	root * /srv
+	file_server
+}

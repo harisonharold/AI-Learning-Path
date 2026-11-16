@@ -1,0 +1,17 @@
+{
+  "name": "Systems Atlas (private)",
+  "url": "https://github.com/harisonharold/AI-Learning-Path",
+  "description": "Personal learning platform. Read-only: it never opens pull requests, comments, or writes anything to GitHub.",
+  "public": false,
+  "callback_urls": ["http://localhost:3000/api/auth/callback/github"],
+  "request_oauth_on_install": false,
+  "setup_on_update": false,
+  "hook_attributes": { "url": "https://example.invalid/no-webhooks", "active": false },
+  "default_events": [],
+  "default_permissions": {
+    "metadata": "read",
+    "contents": "read",
+    "issues": "read",
+    "pull_requests": "read"
+  }
+}

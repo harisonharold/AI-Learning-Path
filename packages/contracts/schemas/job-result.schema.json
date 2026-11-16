@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://systems-atlas.local/schemas/job-result.schema.json",
+  "title": "Worker -> web job result callback body (HMAC-signed)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "attempts"],
+  "properties": {
+    "status": { "enum": ["done", "failed"] },
+    "result": {},
+    "error": { "type": ["string", "null"], "maxLength": 4000 },
+    "attempts": { "type": "integer", "minimum": 0, "maximum": 50 }
+  }
+}

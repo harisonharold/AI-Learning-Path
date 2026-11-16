@@ -1,0 +1,72 @@
+name: ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: lint · typecheck · unit · bundle scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm check:strings
+      - name: AT-03 secret-in-bundle scan (canary values)
+        run: sh infra/ci/build-and-scan.sh
+
+  python:
+    name: ruff · pyright · pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --frozen --all-packages
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pyright
+      - run: uv run pytest -q
+
+  integration:
+    name: integration (Testcontainers MySQL 8.4 + Redis 7)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:int
+
+  e2e:
+    name: compose · e2e · axe · edge
+    runs-on: ubuntu-latest
+    needs: [node, python]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Start stack (7 services + test-only mock GitHub)
+        run: pnpm up:test
+      - name: AT-01 all /healthz 200 within 120 s
+        run: sh infra/scripts/compose-smoke.sh -f infra/compose/compose.test.yaml
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Playwright e2e + axe (both themes)
+        run: pnpm exec playwright test --trace off
+      - name: X-02 Caddy edge rules
+        run: sh infra/caddy/caddy.test.sh
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --env-file .env -f infra/compose/compose.yaml -f infra/compose/compose.test.yaml logs --no-color | tail -300

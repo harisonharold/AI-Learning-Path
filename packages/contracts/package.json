@@ -1,0 +1,1 @@
+{ "name": "@atlas/contracts", "private": true, "type": "module", "exports": { "./schemas/*": "./schemas/*", "./hmac-vectors.json": "./hmac-vectors.json" } }
