@@ -1,6 +1,6 @@
 # THREAT_MODEL.md — Systems Atlas
 
-Status: **DRAFT, awaiting approval.** Method: assets → trust boundaries → STRIDE per boundary → LLM-specific threats → OWASP mapping → mitigations mapped to acceptance tests (AT-xx from H.2, X-xx from PLAN.md §5) → residual risks. Threat IDs (T-…) are referenced from PLAN.md.
+Status: **Revision 2 — approved with required fixes 2026-11-16** (SSRF guard, sandbox origin, practice checks, HMAC nonce, single-account allowlist, reworded AT-27, OWASP UNVERIFIED until P7). Method: assets → trust boundaries → STRIDE per boundary → LLM-specific threats → OWASP mapping → mitigations mapped to acceptance tests (AT-xx from H.2, X-xx from PLAN.md §5) → residual risks. Threat IDs (T-…) are referenced from PLAN.md.
 
 Context that shapes the model: single learner, self-hosted (local Compose or one VM), no payments, but it holds third-party credentials (GitHub, AI provider), can spend money (AI calls), publishes a public portfolio, and fetches untrusted content (issues, READMEs, papers, arbitrary URLs).
 
@@ -24,7 +24,7 @@ Context that shapes the model: single learner, self-hosted (local Compose or one
 
 ```
  TB1 Browser ⇄ web (internet, TLS via Caddy)
- TB2 Pyodide sandbox iframe ⇄ app page (postMessage)
+ TB2 Pyodide iframe on SANDBOX_ORIGIN (separate host, static, no cookies, no /api) ⇄ app page on APP_ORIGIN (postMessage only)
  TB3 web ⇄ api-py (internal net, HMAC)
  TB4 web/workers ⇄ Redis (internal net, password)
  TB5 web ⇄ MySQL (internal net, least-privilege users)
@@ -45,7 +45,7 @@ Format: threat → mitigation → test.
 ### TB1 Browser ⇄ web
 | ID | S/T/R/I/D/E | Threat | Mitigation | Test |
 |---|---|---|---|---|
-| T-A1 | S | Any GitHub user signs in to the public VM and uses it (storage, publishing) | `ALLOWED_GITHUB_LOGINS` allowlist in a Better Auth `before` hook; reject + audit | X-01 |
+| T-A1 | S | Any GitHub user signs up on the public VM and uses it (storage, publishing); or someone takes over Harison's *login* after a rename | Single-account allowlist by immutable numeric GitHub id (`ALLOWED_GITHUB_USER_ID`, exactly one value, required at boot); Better Auth create/link hooks reject before any row is written; audit `auth.signup_rejected` | X-01 (a–e) |
 | T-A2 | S | Session theft via XSS | CSP (nonce-based scripts, `object-src 'none'`, `frame-ancestors 'none'`), HttpOnly + Secure + SameSite=Lax cookies, sanitised Markdown, React escaping, no `dangerouslySetInnerHTML` outside the sanitiser (lint rule) | AT-13 (axe doesn't cover), X-12, CSP header test |
 | T-A3 | T | CSRF on mutations | Better Auth CSRF + `Origin`/`Sec-Fetch-Site` check on every non-GET `/api/*`; SameSite=Lax | int test: cross-origin POST → 403 |
 | T-A4 | E | IDOR: user A reads/edits user B's projects/attempts/settings | `authorize()` in every handler; repo functions require `userId`; route-manifest-generated matrix | **AT-04** |
@@ -59,16 +59,17 @@ Format: threat → mitigation → test.
 ### TB2 Pyodide iframe ⇄ app
 | ID | | Threat | Mitigation | Test |
 |---|---|---|---|---|
-| T-B1 | E | Code run in Pyodide on the app origin calls `/api/*` with the user's cookie (pasted malicious snippet, poisoned lesson/mentor output) | `<iframe sandbox="allow-scripts">` (opaque origin), its own CSP `connect-src 'none'` except self-hosted Pyodide assets; results via `postMessage` with origin check + Zod | X-05 |
-| T-B2 | T | Test results forged in browser | Inherent; browser attempts labelled `self-run`; exams need runner/commit/reviewer evidence (Q6) | AT-08, X-11 |
-| T-B3 | I | Hidden tests / answer keys exposed in bundle | Only public tests shipped; hidden tests run via runner; solutions served only after gate pass | X-06 |
-| T-B4 | D | Infinite loop freezes the tab | Run in a Web Worker inside the iframe; terminate on timeout | e2e |
+| T-B1 | E | Code run in Pyodide (pasted snippet, poisoned lesson/mentor output) calls `/api/*` with the session cookie or reads app DOM/storage | Pyodide runs **only** on `SANDBOX_ORIGIN`, a different host: static files, no `/api`, never `Set-Cookie`; app session cookie is host-only so it is never sent there; app CSP `frame-src SANDBOX_ORIGIN`, sandbox CSP `connect-src 'self'` + `frame-ancestors APP_ORIGIN`; iframe `sandbox="allow-scripts allow-same-origin"` (grants only the sandbox's own origin); a cross-origin `fetch` to `APP_ORIGIN` carries no credentials and is refused by CORS; parent accepts `postMessage` only from `SANDBOX_ORIGIN`, Zod-validated | X-05 |
+| T-B2 | T | Practice results forged in the browser and used to pass a gate | Browser results are **practice checks**: `attempts.status = practice` enforced by DB CHECK, ignored by `gateState()`; gates count only server-side evidence (server-graded answers, GitHub-API-verified commits/CI, reviewer scores, server-revalidated uploads) or atlas-lab results | AT-08 (reworded), X-13 |
+| T-B3 | I | Hidden tests / answer keys exposed | Only public practice tests are served (on the sandbox origin); gate test bundles go only to atlas-lab with a runner token; MCQ/short-answer keys stay server-side; solutions served only after gate pass | X-06 |
+| T-B4 | D | Infinite loop freezes the tab | Pyodide in a Web Worker inside the sandbox frame; terminate on timeout; the app page stays responsive because the frame is cross-origin (separate process where the browser isolates sites) | e2e |
+| T-B5 | S | A page framed elsewhere impersonates the sandbox and posts fake results | Origin check on every message; results are practice only, so a forged message cannot change gate state | X-05, X-13 |
 
 ### TB3 / TB6 web ⇄ api-py, worker-py → web callback
 | ID | | Threat | Mitigation | Test |
 |---|---|---|---|---|
-| T-W1 | S | Forged job result posted to `/api/internal/jobs/:id/result` | HMAC-SHA256 over `method ‖ path ‖ timestamp ‖ nonce ‖ sha256(body)`, constant-time compare | **AT-05** |
-| T-W2 | T | Replay of a valid callback | Timestamp ±5 min + nonce stored in Redis (TTL 10 min); job state machine only accepts `running → done/failed` once | X-10 |
+| T-W1 | S | Forged job result posted to `/api/internal/jobs/:id/result`, or forged call to api-py | HMAC-SHA256 over `METHOD\npath\ntimestamp\nnonce\nsha256(body)` with `INTERNAL_HMAC_KEY` (≥ 32 bytes), constant-time compare; same scheme both directions with shared test vectors | **AT-05**, X-10 |
+| T-W2 | T | Replay of a valid signed request | Reject if `timestamp` is more than 5 minutes old (or more than 5 minutes in the future); reject if the nonce was seen before — `SET hmac:nonce:<nonce> 1 NX EX 600` in Redis, checked *after* the signature and timestamp pass; Redis error ⇒ reject (fail closed); job state machine accepts `running → done/failed` once | X-10 |
 | T-W3 | I | api-py exposed publicly | No published ports in prod; HMAC required even internally | Compose config test |
 | T-W4 | D | Large stats payloads exhaust api-py | Body limit, sample cap, 5 s timeout; heavy work goes to worker-py | U test |
 | T-W5 | E | Internet reaches `/api/internal/*` through Caddy | Caddy `respond /api/internal/* 404`; HMAC still required | X-02 |
@@ -94,7 +95,7 @@ Format: threat → mitigation → test.
 ### TB8 worker-node → GitHub
 | ID | | Threat | Mitigation | Test |
 |---|---|---|---|---|
-| T-G1 | E | Platform performs outward actions (PRs, comments) | App manifest requests read-only permissions; `gh-client` exposes `get()` only; route-manifest audit finds no PR/comment route; `permissions_json` re-checked on refresh | **AT-27, AT-30** |
+| T-G1 | E | Platform performs outward actions (PRs, comments, grant deletion) | AT-27 (reworded): the GitHub data module sends only `GET https://api.github.com/...` through a `get()`-only client; the single allowed POST is the OAuth token exchange/refresh at `https://github.com/login/oauth/access_token`, inside `modules/auth`; lint forbids importing it elsewhere; App manifest read-only; no installation-token minting; `permissions_json` re-checked on refresh; account delete makes no GitHub call and shows revoke-by-hand steps | **AT-27, AT-30**, X-14 |
 | T-G2 | D | Rate-limit exhaustion / bans | ETags, ≤ hourly sync, backoff on `x-ratelimit-reset` and `retry-after` (secondary limits), search ≤ 30/min | **AT-29** |
 | T-G3 | T/I | Malicious issue/README content (XSS, prompt injection) | Escaped rendering; passed to mentor only as quoted data (§4); estimator is deterministic code | X-12, AT-28 |
 | T-G4 | S | Forged "merged PR" evidence | Merged state + author login re-fetched from API before evidence is minted | **AT-31** |
@@ -105,7 +106,7 @@ See §4 (LLM threats). Network-level: key sent only to the provider host; TLS; n
 ### TB10 worker-node → arbitrary URLs
 | ID | | Threat | Mitigation | Test |
 |---|---|---|---|---|
-| T-V1 | E/I | **SSRF**: `POST /api/sources/verify {url}` targets `http://redis:6379`, `http://api-py`, `169.254.169.254`, `localhost` | Resolve DNS then connect to the resolved IP; block private/loopback/link-local/CGNAT/ULA ranges and Compose service names; http/https on 80/443 only; re-validate every redirect (max 3); 5 s timeout; 2 MB body cap; no cookies/credentials sent | X-04 |
+| T-V1 | E/I | **SSRF**: `POST /api/sources/verify {url}` (or a seed/redirect) targets `http://redis:6379`, `http://api-py`, `http://169.254.169.254/`, `localhost`, or uses DNS rebinding | `safeFetch` (D-17), the only outbound HTTP helper for URL verification: (1) scheme `http`/`https` only; (2) port 80 or 443 only (explicit or default), userinfo rejected; (3) host parsed by the WHATWG URL parser (normalises decimal/octal/hex IPv4); `localhost`, `*.localhost`, `*.internal`, single-label names and Compose service names refused; (4) DNS resolved, **every** A/AAAA checked against: `0.0.0.0/8`, `10.0.0.0/8`, `100.64.0.0/10`, `127.0.0.0/8`, `169.254.0.0/16`, `172.16.0.0/12` (includes the pinned Compose subnet `172.28.0.0/16`, listed explicitly too), `192.0.0.0/24`, `192.0.2.0/24`, `192.168.0.0/16`, `198.18.0.0/15`, `198.51.100.0/24`, `203.0.113.0/24`, `224.0.0.0/4`, `240.0.0.0/4`, `::/128`, `::1/128`, `::ffff:0:0/96` (checked as the embedded IPv4), `64:ff9b::/96` (embedded IPv4), `fc00::/7`, `fe80::/10`, `ff00::/8`, `2001:db8::/32`; (5) the socket connects to the *validated* IP (custom lookup on Node's built-in undici dispatcher — no new dep), defeating rebinding; (6) redirects followed manually, max 3, each re-run through (1)–(5); (7) 5 s connect, 10 s total timeout; (8) body streamed and aborted at 2 MB; (9) no cookies, auth headers or proxy credentials sent. Blocked/aborted ⇒ source `broken` with `fetch_block_reason`. arXiv and GitHub API calls also use fixed host allowlists | X-04 |
 | T-V2 | T | Captcha / "Access denied" page stored as verified | Title/body heuristics + status rules → `partial`/`broken` | **AT-23** |
 | T-V3 | T | Source spoofing (page title matches but content changed) | Store `final_url`, raw title, `verify_method`; arXiv/GitHub via official APIs only | **AT-22** |
 | T-V4 | T | LLM invents a citation | Only API-returned records become sources; mentor can cite only ids from the retrieved set; unknown ids dropped | AT-35, §4 |
@@ -143,7 +144,7 @@ See §4 (LLM threats). Network-level: key sent only to the provider host; TLS; n
 
 ## 5. OWASP Top 10 mapping
 
-Edition note: mapped to the **OWASP Top 10:2025** category names as I recall them (A01 Broken Access Control, A02 Security Misconfiguration, A03 Software Supply Chain Failures, A04 Cryptographic Failures, A05 Injection, A06 Insecure Design, A07 Authentication Failures, A08 Software or Data Integrity Failures, A09 Security Logging and Alerting Failures, A10 Mishandling of Exceptional Conditions). **UNVERIFIED against the live page** (https://owasp.org/projects/top-ten, listed in SOURCES §5 but its category list was not recorded there) — the builder must re-check before P7 sign-off.
+Edition note (**UNVERIFIED until X-15**, a P7 exit condition): mapped to the **OWASP Top 10:2025** category names as I recall them (A01 Broken Access Control, A02 Security Misconfiguration, A03 Software Supply Chain Failures, A04 Cryptographic Failures, A05 Injection, A06 Insecure Design, A07 Authentication Failures, A08 Software or Data Integrity Failures, A09 Security Logging and Alerting Failures, A10 Mishandling of Exceptional Conditions). **UNVERIFIED against the live page** (https://owasp.org/projects/top-ten, listed in SOURCES §5 but its category list was not recorded there) — the builder must re-check before P7 sign-off.
 
 | Category | Threats | Tests |
 |---|---|---|
@@ -160,7 +161,7 @@ Edition note: mapped to the **OWASP Top 10:2025** category names as I recall the
 
 ## 6. OWASP Top 10 for LLM Applications mapping
 
-Edition note: **2025 list as I recall it**; UNVERIFIED against https://owasp.org/projects/top-10-for-large-language-model-applications — re-check whether a newer edition exists.
+Edition note (**UNVERIFIED until X-15**, a P7 exit condition): **2025 list as I recall it**; UNVERIFIED against https://owasp.org/projects/top-10-for-large-language-model-applications — re-check whether a newer edition exists.
 
 | Item | Coverage |
 |---|---|
@@ -177,9 +178,11 @@ Edition note: **2025 list as I recall it**; UNVERIFIED against https://owasp.org
 
 ## 7. Mitigation → test index
 
-AT-02 not-configured · AT-03 bundle secrets · AT-04 IDOR · AT-05 HMAC · AT-15/16 upload integrity · AT-17 GPU cost · AT-18 runner tokens · AT-20 mock exclusion · AT-22/23 source honesty · AT-27/30 no outward action · AT-29 rate limits · AT-31 PR evidence · AT-32 mentor off · AT-33/34 solution withholding · AT-35 confidence · AT-36 budget · AT-37 write-only keys · AT-39 publish · AT-41/42 career honesty · AT-44 restore · AT-47 degradation · X-01 allowlist · X-02 internal path block · X-03 redaction · X-04 SSRF · X-05 Pyodide origin · X-06 solution not in bundle · X-07 context builder · X-08 budget race · X-09 restricted labs · X-10 replay · X-11 scorer rules · X-12 escaping.
+AT-02 not-configured · AT-08 practice checks · AT-03 bundle secrets · AT-04 IDOR · AT-05 HMAC · AT-15/16 upload integrity · AT-17 GPU cost · AT-18 runner tokens · AT-20 mock exclusion · AT-22/23 source honesty · AT-27/30 no outward action · AT-29 rate limits · AT-31 PR evidence · AT-32 mentor off · AT-33/34 solution withholding · AT-35 confidence · AT-36 budget · AT-37 write-only keys · AT-39 publish · AT-41/42 career honesty · AT-44 restore · AT-47 degradation · X-01 allowlist · X-02 internal path block · X-03 redaction · X-04 SSRF · X-05 Pyodide origin · X-06 solution not in bundle · X-07 context builder · X-08 budget race · X-09 restricted labs · X-10 replay · X-11 scorer rules · X-12 escaping · X-13 practice checks never count · X-14 delete without GitHub calls · X-15 live OWASP check.
 
 ## 8. Security review of spec choices (flagged with evidence; not silently changed)
+
+Revision 2 status: items 1–8 resolved by approved decisions — 1 → D-17/X-04; 2 → D-14/X-05; 3 → D-15/X-13; 4 → D-18, D-13, D-19/AT-27, X-14; 5 → D-16/X-10; 6 → Caddy block/X-02; 7 → D-08/X-01; 8 → Q6/X-11. Items 9–13 resolved as proposed. OWASP lists (§5–6) remain UNVERIFIED (D-22).
 
 1. **SSRF not addressed.** G §4 `POST /api/sources/verify {url|arxivId|repo}` (D.4) + F.2 "URL fetch" let the server fetch user-chosen URLs from inside the Compose network where Redis, MySQL and api-py live (G §1 topology). Nothing in G §8 mentions it. → T-V1 / X-04.
 2. **Pyodide on the app origin.** G §6.1 and AT-08 say exercises run in-browser; nothing isolates them. Pyodide can issue `fetch` from Python (`pyodide.http.pyfetch`), so same-origin code inherits the session cookie. → T-B1 / X-05.
@@ -199,10 +202,12 @@ AT-02 not-configured · AT-03 bundle secrets · AT-04 IDOR · AT-05 HMAC · AT-1
 
 | ID | Residual risk | Why accepted |
 |---|---|---|
-| RR1 | The learner can fake browser and runner results on their own machine | Single-user product; evidence that matters publicly (merged PRs, repos with CI) is verified via GitHub API; exams labelled by evidence source |
+| RR1 | atlas-lab runs on the learner's own machine, so its results can still be forged (browser results can't count at all, D-15) | Single-user product; public evidence (merged PRs, repo CI status) is verified via the GitHub API; every gate shows which evidence kinds passed it |
 | RR2 | A compromised VM exposes `TOKEN_ENC_KEY` and therefore all encrypted tokens/keys | One-box deployment; mitigated by read-only GitHub scope and provider spend caps the user sets at the provider (C.9 step 1) |
 | RR3 | Prompt injection can still make the mentor say wrong or rude things | No tools, all policy server-side, every message tagged AI-generated |
 | RR4 | Source pages can change after verification | 30-day staleness + nightly re-check; we show "read on DATE" |
 | RR5 | Similarity-based solution detection has false negatives (paraphrased solutions) | Hint ladder + code-length filter reduce it; perfect detection impossible |
 | RR6 | Dependency vulnerabilities between updates | Lockfiles, alerts, monthly update window |
-| RR7 | OWASP category lists cited from memory | Marked UNVERIFIED; re-check before P7 |
+| RR7 | OWASP category lists cited from memory | Marked UNVERIFIED; X-15 live check is a P7 exit condition |
+| RR8 | A sandbox *subdomain* is same-site with the app (cross-origin, but `SameSite=Lax` treats it as same-site) | Cookies are host-only and never sent to it, it serves only static files, and its results can't count; a separate registrable domain would remove this (Q21) |
+| RR9 | `safeFetch` blocklist misses a future special-use range | Ranges kept in one constant with a test per range; reviewed with dependency updates |

@@ -1,6 +1,6 @@
 # DATA_MODEL.md — Systems Atlas
 
-Status: **DRAFT, awaiting approval.** Baseline: G §3 (authoritative) and D.3 (DDL sketch). Every deviation is tagged **[Δ]** and listed with its reason in §9. The Drizzle schema in `apps/web/db/schema/*.ts` will be the single source of truth; this file is its design doc.
+Status: **Revision 2 — approved with changes 2026-11-16** (practice checks, allowlist, HMAC nonce, SSRF fields). Baseline: G §3 (authoritative) and D.3 (DDL sketch). Every deviation is tagged **[Δ]** and listed with its reason in §9. The Drizzle schema in `apps/web/db/schema/*.ts` will be the single source of truth; this file is its design doc.
 
 ## 1. Conventions
 
@@ -16,7 +16,7 @@ Status: **DRAFT, awaiting approval.** Baseline: G §3 (authoritative) and D.3 (D
 
 | Table | Columns (key ones) | Keys / indexes | Notes |
 |---|---|---|---|
-| `user`, `session`, `account`, `verification` | Better Auth standard | Better Auth defaults | Generated via Better Auth's Drizzle schema output (PLAN D-05). `account.accessToken/refreshToken` for the GitHub sign-in grant are encrypted by a Better Auth hook **[Δ]** (by default they are plaintext) |
+| `user`, `session`, `account`, `verification` | Better Auth standard | Better Auth defaults; UNIQUE(`account.providerId`, `account.accountId`) | Owned by `modules/auth` (PLAN D-13). Generated via Better Auth's Drizzle schema output (D-05). `account.accessToken/refreshToken` encrypted by a hook **[Δ]** (plaintext by default). Rows are created **only** for the GitHub numeric id in `ALLOWED_GITHUB_USER_ID` (D-08): the create hook rejects before insert, so a rejected sign-up leaves no row. Session cookie is host-only (no `Domain`) so `SANDBOX_ORIGIN` never receives it (D-14) |
 | `profiles` **[Δ]** | `user_id PK FK`, `handle VARCHAR(39) UNIQUE`, `display_name`, `bio` | UNIQUE(handle) | Needed by `/p/:handle` |
 | `user_roles` **[Δ]** | `user_id FK`, `role ENUM('learner','reviewer','admin')` | PK(user_id, role) | C.2 roles; admin is a separate flag on the same person |
 | `user_settings` **[Δ]** | `user_id PK FK`, `mode ENUM('ACC','RI')`, `hours_per_week TINYINT` (20/30/40/50), `timezone VARCHAR(64) DEFAULT 'America/Toronto'`, `theme`, `sample_data BOOLEAN DEFAULT FALSE`, `ai_provider ENUM('none','anthropic') DEFAULT 'none'`, `ai_model VARCHAR(80)`, `a11y_pause_timers BOOLEAN` | PK | G §4 `GET/PUT /api/settings` had no table |
@@ -34,10 +34,10 @@ Status: **DRAFT, awaiting approval.** Baseline: G §3 (authoritative) and D.3 (D
 | `weeks` | `id VARCHAR(32) PK` (e.g. `RI-W05`, `ACC-03`), `mode`, `ordinal`, `title`, `hardware ENUM('CPU','GPU_FREE','GPU_RENT')`, `content_version`, `ri_week_ids JSON` **[Δ]**, `no_ai_code BOOLEAN` **[Δ]**, `publish_restricted BOOLEAN` **[Δ]**, `restriction_note` **[Δ]** | UNIQUE(mode, ordinal) | `ri_week_ids` maps ACC merges (G §7); `no_ai_code` drives the mentor filter (Q8); `publish_restricted` for course-policy labs (X-09) |
 | `gates` | `id VARCHAR(64) PK`, `week_id FK`, `kind ENUM('tests','exam','report','defense')`, `rubric_json`, `required_evidence JSON`, `skill_ids JSON`, `objective_spec JSON` **[Δ]**, `content_version` | INDEX(week_id) | `required_evidence` = list of `{kind: tests|commit_sha|report|recording|runner_result, label}` |
 | `gate_skills` **[Δ]** | `gate_id FK`, `skill_id FK` | PK | Normalised copy of `skill_ids` so lock queries can join (JSON arrays can't be FK'd) |
-| `exercises` **[Δ]** | `id VARCHAR(64) PK`, `gate_id FK NULL`, `week_id FK`, `language ENUM('python','c','go','cpp','cuda')`, `runtime ENUM('pyodide','runner')`, `public_tests_uri`, `solution_uri` (server-only path) | INDEX(week_id) | Page 6 needs an exercise catalogue; `solution_uri` never served before gate pass (X-06) |
+| `exercises` **[Δ]** | `id VARCHAR(64) PK`, `gate_id FK NULL`, `week_id FK`, `language ENUM('python','c','go','cpp','cuda')`, `practice_runtime ENUM('pyodide','none')`, `public_tests_uri` (served on `SANDBOX_ORIGIN` for practice checks), `gate_tests_ref` (versioned test bundle id fetched by atlas-lab with a runner token; never shipped to the browser), `solution_uri` (server-only path) | INDEX(week_id) | Page 6 catalogue. Public tests = practice only (D-15). `solution_uri` never served before gate pass (X-06) |
 | `user_skill_state` | `user_id FK`, `skill_id FK`, `level ENUM('not_started','developing','competent','verified')`, `updated_at` | PK(user_id, skill_id) | derived cache; recomputed from attempts |
-| `attempts` | `id`, `user_id FK`, `gate_id FK`, `exercise_id FK NULL` **[Δ]**, `source ENUM('browser','runner','manual','diagnostic')` **[Δ adds diagnostic]**, `status ENUM('pending_evidence','passed','failed')` **[Δ]**, `passed BOOLEAN` (kept, = status='passed'), `score DECIMAL(5,2)`, `result_json`, `evidence_url`, `commit_sha CHAR(40)`, `content_version` **[Δ]**, `hints_used TINYINT` **[Δ]**, `is_mock`, `created_at` | INDEX(user_id, gate_id, created_at) | AT-07 needs a "pending evidence" state; E.3 §6 stores hints used |
-| `attempt_evidence` **[Δ]** | `id`, `attempt_id FK`, `kind` (matches `required_evidence.kind`), `url`, `commit_sha`, `runner_run_id FK NULL`, `verified BOOLEAN`, `verified_at` | INDEX(attempt_id) | multiple evidence items per attempt (AT-07) |
+| `attempts` | `id`, `user_id FK`, `gate_id FK`, `exercise_id FK NULL` **[Δ]**, `source ENUM('browser','runner','server','manual','diagnostic')` **[Δ adds server, diagnostic]**, `status ENUM('practice','pending_evidence','passed','failed')` **[Δ]**, `passed BOOLEAN` (kept; for practice rows it records the practice-check outcome only), `score DECIMAL(5,2)`, `result_json`, `evidence_url`, `commit_sha CHAR(40)`, `content_version` **[Δ]**, `hints_used TINYINT` **[Δ]**, `is_mock`, `created_at` | INDEX(user_id, gate_id, created_at); **CHECK (`source <> 'browser'` OR `status = 'practice'`)** and **CHECK (`status <> 'practice'` OR `source = 'browser'`)** **[Δ]** | AT-07 "pending evidence"; E.3 §6 hints. Browser results are "practice checks" (D-15): the DB itself refuses a browser row in any counting state, and `gateState()` filters `status <> 'practice'` (X-13). MySQL 8.4 enforces CHECK constraints |
+| `attempt_evidence` **[Δ]** | `id`, `attempt_id FK`, `kind ENUM('runner_result','server_graded','github_commit','github_ci','reviewer_score','self_rubric','report','recording')`, `counts BOOLEAN` (generated: TRUE for `runner_result`, `server_graded`, `github_commit`, `github_ci`, `reviewer_score`; FALSE for `self_rubric`; `report`/`recording` count only as the artifact a rubric scores), `url`, `commit_sha`, `runner_run_id FK NULL`, `verified BOOLEAN`, `verified_at`, `verify_method` | INDEX(attempt_id) | Multiple evidence items per attempt (AT-07). `github_commit`/`github_ci` verified with GET via the GitHub data module. No evidence kind exists for browser results (D-15) |
 | `rubric_scores` | `id`, `attempt_id FK`, `criterion`, `level ENUM(missing,partial,competent,strong)`, `scorer ENUM(self,reviewer,auto,ai_suggested)`, `scorer_user_id FK NULL` **[Δ]**, `note`, `created_at` | INDEX(attempt_id) | scorer derived from session role, never from body; `ai_suggested` excluded from pass logic (X-11) |
 | `remediation_plans` **[Δ]** | `id`, `user_id FK`, `gate_id FK`, `failed_attempt_id FK`, `track_json`, `status ENUM('open','done')`, `reattempt_after DATETIME NULL`, `created_at` | INDEX(user_id, status) | FR-8 / AT-11 had no table; B.6 "after 48 h" rule |
 | `diagnostic_sessions` **[Δ]** | `id`, `user_id FK`, `state_json` (autosave), `paused_ms`, `started_at`, `completed_at`, `result_json` | INDEX(user_id) | E.3 §2 autosave + pause |
@@ -49,7 +49,7 @@ Status: **DRAFT, awaiting approval.** Baseline: G §3 (authoritative) and D.3 (D
 
 | Table | Columns | Keys / indexes | Notes |
 |---|---|---|---|
-| `sources` | `id`, `kind ENUM(paper,repo,course,doc,price,issue,job,blog)`, `url VARCHAR(2048)` **[Δ length]**, `url_hash CHAR(64)` **[Δ]**, `final_url` **[Δ]**, `title`, `venue`, `year`, `external_id`, `licence`, `last_activity_at`, `verification ENUM(verified,partial,unverified,broken)`, `verified_at DATETIME NULL` **[Δ nullable]**, `last_checked_at DATETIME NOT NULL` **[Δ]**, `verify_method`, `verify_note` **[Δ]**, `raw_json`, `seed_verified_at` **[Δ]** | UNIQUE(url_hash), INDEX(kind), INDEX(verified_at), UNIQUE(kind, external_id) | `verified_at` = last *successful* verification; staleness = `now − verified_at > 30 d` or NULL. A failed re-check updates `last_checked_at` and may downgrade `verification`, but never refreshes `verified_at` |
+| `sources` | `id`, `kind ENUM(paper,repo,course,doc,price,issue,job,blog)`, `fetch_block_reason VARCHAR(64) NULL` **[Δ]** (e.g. `private_address`, `port_not_allowed`, `redirect_limit`, `size_cap`, `timeout`, set by `safeFetch`; D-17), `url VARCHAR(2048)` **[Δ length]**, `url_hash CHAR(64)` **[Δ]**, `final_url` **[Δ]**, `title`, `venue`, `year`, `external_id`, `licence`, `last_activity_at`, `verification ENUM(verified,partial,unverified,broken)`, `verified_at DATETIME NULL` **[Δ nullable]**, `last_checked_at DATETIME NOT NULL` **[Δ]**, `verify_method`, `verify_note` **[Δ]**, `raw_json`, `seed_verified_at` **[Δ]** | UNIQUE(url_hash), INDEX(kind), INDEX(verified_at), UNIQUE(kind, external_id) | `verified_at` = last *successful* verification; staleness = `now − verified_at > 30 d` or NULL. A failed re-check updates `last_checked_at` and may downgrade `verification`, but never refreshes `verified_at` |
 | `papers` | `id`, `user_id FK` **[Δ]**, `source_id FK`, `title` **[Δ denormalised]**, `abstract TEXT`, `authors_json`, `user_notes MEDIUMTEXT`, `analysis_json`, `status ENUM('to_read','read','analysed')` **[Δ]**, `is_mock` | UNIQUE(user_id, source_id), FULLTEXT(title, abstract, user_notes) | Notes are per user (AT-04); title copied for FULLTEXT (can't span tables) |
 | `dossiers` | `id`, `slug UNIQUE`, `title`, `classification ENUM(...)`, `fields_json` (20 fields), `difficulty TINYINT`, `feasibility TINYINT`, `hardware ENUM(CPU,GPU_FREE,GPU_RENT,MULTI_GPU)`, `override_note TEXT NULL` **[Δ]**, `security_sensitive BOOLEAN` **[Δ]**, `reviewed_at` | UNIQUE(slug), INDEX(classification) | CHECK difficulty/feasibility 1–5. `override_note` = AT-24 escape hatch; `security_sensitive` (F.4-3) makes the mentor refuse exploit content |
 | `dossier_evidence` | `dossier_id FK`, `source_id FK`, `claim TEXT`, `evidence_date DATE`, `is_primary BOOLEAN` **[Δ]** | PK(dossier_id, source_id) | `is_primary` for the "documented open problem" rule |
@@ -83,6 +83,16 @@ Status: **DRAFT, awaiting approval.** Baseline: G §3 (authoritative) and D.3 (D
 | `interview_sessions` **[Δ]** | `id`, `user_id FK`, `kind ENUM('coding','system_design','defend','behavioural')`, `started_at`, `ended_at`, `transcript_md`, `recording_ref` (local file name + sha256 only; file stays in browser), `attempt_id FK NULL` | INDEX(user_id) | AT-38; rubric scores reuse `rubric_scores` via `attempt_id` |
 | `portfolio_items` | `id`, `user_id FK`, `kind`, `ref_id BIGINT`, `slug`, `published BOOLEAN DEFAULT FALSE`, `checks_json`, `published_at`, `evidence_verified_at` **[Δ]** | UNIQUE(user_id, slug) | CHECK at service layer: publish only if source artifact verified, not mock, not `publish_restricted` |
 | `writing_drafts` **[Δ]** | `id`, `user_id FK`, `kind ENUM('linkedin','resume_bullet','blog')`, `sentences_json` `[{text, evidence:[{kind,id}]}]`, `created_at` | INDEX(user_id) | AT-41: rejected sentences are never stored |
+
+## 7a. State kept in Redis, not MySQL **[Δ]**
+
+| Key | Value | TTL | Purpose |
+|---|---|---|---|
+| `hmac:nonce:<nonce>` | `1` (set with `NX`) | 600 s | Replay protection for internal calls (D-16). A failed `SET NX` = reused nonce ⇒ 401; Redis unreachable ⇒ fail closed (503) |
+| `rl:<route>:<user|ip>` | token bucket | per bucket | Rate limits (G §8) |
+| BullMQ keys | queue state | BullMQ-managed | Jobs; the durable record is `jobs` in MySQL |
+
+Redis holds no secrets and no record whose loss changes evidence; losing it only drops in-flight jobs (re-queued from `jobs`) and nonces (callbacks older than 5 minutes are already rejected by timestamp).
 
 ## 7. MySQL configuration that the model depends on
 
@@ -127,5 +137,11 @@ Status: **DRAFT, awaiting approval.** Baseline: G §3 (authoritative) and D.3 (D
 | 13 | `jobs.user_id`, `jobs.attempts`; `audit_log.ip_hash` | Authz on job listing, retry count (D.7 max 5), forensic trace without storing raw IPs |
 | 14 | `is_mock` on attempts, projects, runs, papers, contributions | G §0.5 says "records carry is_mock"; G §3 only had it on runs |
 | 15 | Better Auth `account` tokens encrypted at rest | G §0.8/FR-17 "tokens encrypted at rest"; Better Auth stores them plaintext by default |
+| 16 | `attempts.status` gains `practice`; `attempts.source` gains `server`; two CHECK constraints tie `browser` ⇔ `practice` | Approved fix: browser tests can't be hidden, so they are practice checks and must be impossible to count (D-15, X-13) |
+| 17 | `attempt_evidence.kind` enum + generated `counts` column | Makes "counting evidence = server-side or atlas-lab only" a data rule, not just service logic |
+| 18 | `exercises.practice_runtime`, `gate_tests_ref` replace a single `runtime` | Public practice tests (sandbox origin) are separated from gate test bundles (atlas-lab only) |
+| 19 | `sources.fetch_block_reason` | SSRF guard outcomes are recorded so a blocked URL shows *why* it is `broken` (D-17, X-04) |
+| 20 | Redis nonce keys (§7a) | Approved fix: HMAC replay protection (D-16, X-10) |
+| 21 | Auth rows only for the allowlisted GitHub id | Approved fix: single-account sign-up (D-08, X-01). AT-04's second user is inserted by test fixtures directly, never through sign-up |
 
 Nothing in G §3 is removed.
