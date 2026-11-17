@@ -3,6 +3,8 @@ import { EnvError, getEnv, registerSecrets, secretValues } from "./modules/platf
 /** Fail fast on invalid env (exit 78 = EX_CONFIG) and register secrets for log redaction. */
 try {
   registerSecrets(secretValues(getEnv()));
+  const { startTracing } = await import("./modules/platform/internal/telemetry-boot.ts");
+  if (startTracing("web")) process.stdout.write(JSON.stringify({ level: "info", msg: "tracing enabled" }) + "\n");
 } catch (e) {
   if (e instanceof EnvError) {
     for (const i of e.issues) process.stderr.write(JSON.stringify({ level: "fatal", msg: "invalid environment", var: i.path, problem: i.message }) + "\n");

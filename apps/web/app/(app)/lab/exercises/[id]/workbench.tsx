@@ -60,7 +60,7 @@ export function ExerciseWorkbench(p: Props) {
           {solution && <pre className="num panel mt-2 overflow-x-auto text-sm">{solution}</pre>}
         </div>
       ) : <p className="text-sm text-[var(--ink-muted)]">The reference solution unlocks after you pass this gate.</p>}
-      <SandboxFrame frameRef={sb.frameRef} src={sb.src} />
+      <SandboxFrame frameRef={sb.frameRef} />
     </div>
   );
 }

@@ -20,7 +20,7 @@ export function RunPython({ code, sandboxOrigin }: { code: string; sandboxOrigin
       {out && (
         <pre role="status" className="num max-h-64 overflow-auto border-t border-[var(--border)] p-3 text-sm whitespace-pre-wrap">{out.stdout}{out.stderr ? `\n${out.stderr}` : ""}</pre>
       )}
-      <SandboxFrame frameRef={sb.frameRef} src={sb.src} />
+      <SandboxFrame frameRef={sb.frameRef} />
     </div>
   );
 }

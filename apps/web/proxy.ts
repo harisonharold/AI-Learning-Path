@@ -28,7 +28,7 @@ export function proxy(req: NextRequest) {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://avatars.githubusercontent.com",
-    "font-src 'self'",
+    "font-src 'self' data:", // Monaco ships its icon font inline
     `connect-src 'self'${dev ? " ws:" : ""}`,
     `frame-src ${sandbox?.origin ?? "'none'"}`,
     "worker-src 'self' blob:", // Monaco web workers (self-hosted under /monaco)

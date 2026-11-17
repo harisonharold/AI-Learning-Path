@@ -2,7 +2,13 @@
 name = "api-py"
 version = "0.0.0"
 requires-python = ">=3.12"
-dependencies = ["atlas-common", "fastapi>=0.115", "uvicorn>=0.32", "redis>=5.2"]
+dependencies = [
+    "atlas-common",
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "redis>=5.2",
+    "opentelemetry-instrumentation-fastapi>=0.51b0",
+]
 
 [tool.uv.sources]
 atlas-common = { workspace = true }

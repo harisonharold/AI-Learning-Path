@@ -7,7 +7,8 @@ import { Curriculum, Diagnostic, Exercise, Lesson, Quiz, Source, validateContent
 
 /** Repo content directory. In containers CONTENT_DIR points at the copied /app/content. */
 export function contentDir(): string {
-  return process.env.CONTENT_DIR ?? join(process.cwd(), process.cwd().endsWith("apps/web") ? "../../content" : "content");
+  // Content is copied into the image separately (Dockerfile), so it must not be traced into the server bundle.
+  return process.env.CONTENT_DIR ?? join(/* turbopackIgnore: true */ process.cwd(), process.cwd().endsWith("apps/web") ? "../../content" : "content");
 }
 
 export function loadContent(dir = contentDir()): Content {

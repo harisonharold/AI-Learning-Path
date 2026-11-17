@@ -21,6 +21,10 @@ export function useSandbox(sandboxOrigin: string) {
   const frame = useRef<HTMLIFrameElement | null>(null);
   const pending = useRef(new Map<string, (r: SandboxResult) => void>());
   const [ready, setReady] = useState(false);
+  // Set on the element after mount: the server has no window, and a server-rendered src would carry an empty parent.
+  useEffect(() => {
+    if (frame.current) frame.current.src = `${sandboxOrigin}/sandbox/runner.html?parent=${encodeURIComponent(window.location.origin)}`;
+  }, [sandboxOrigin]);
 
   useEffect(() => {
     const onMessage = (ev: MessageEvent) => {
@@ -42,6 +46,5 @@ export function useSandbox(sandboxOrigin: string) {
       frame.current?.contentWindow?.postMessage({ type: "run", id, code, tests: tests ?? null, timeoutMs }, sandboxOrigin);
     }), [sandboxOrigin]);
 
-  const src = `${sandboxOrigin}/sandbox/runner.html?parent=${encodeURIComponent(typeof window === "undefined" ? "" : window.location.origin)}`;
-  return { frameRef: frame, ready, run, src };
+  return { frameRef: frame, ready, run };
 }
