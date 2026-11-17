@@ -1,0 +1,68 @@
+# Lessons (P1 ships RI weeks 1-3; later weeks list objectives and resources only, PLAN Q12).
+# Cards are the week's "must-know" list (B.4: 15-30 per week); the learner adds them to their deck from the lesson.
+- slug: w01-tooling
+  week: RI-W01
+  title: "Python, Git and Linux tooling"
+  body: lessons/w01-tooling.mdx
+  resources: [missing-semester, python-tutorial, repo-uv, repo-ruff, mit-6042j]
+  exercises: [ex-w01-log-levels]
+  cards:
+    - { front: "What does exit code 0 conventionally mean?", back: "Success. Any non-zero code means failure; the meaning of each non-zero value is defined by the program." }
+    - { front: "In `a | b`, what does the pipe connect?", back: "a's standard output (fd 1) to b's standard input (fd 0)." }
+    - { front: "Program vs process?", back: "A program is an executable file; a process is a running instance with its own address space, PID and open file descriptors." }
+    - { front: "Which file descriptors are 0, 1 and 2?", back: "stdin, stdout and stderr." }
+    - { front: "What does `2>&1` do?", back: "Redirects fd 2 (stderr) to wherever fd 1 (stdout) currently points." }
+    - { front: "What does `git bisect` do and how many test runs does it need?", back: "Binary search between a known-good and a known-bad commit for the commit that introduced a change; about log2(n) test runs for n commits." }
+    - { front: "`git rebase` vs `git merge`?", back: "Rebase replays your commits onto a new base (linear history, new SHAs); merge adds a merge commit and keeps both histories." }
+    - { front: "Why not rebase commits others already pulled?", back: "Rebasing rewrites their SHAs, so collaborators' history diverges from yours." }
+    - { front: "What is branch coverage?", back: "The fraction of branch outcomes (both sides of each decision) that the tests execute." }
+    - { front: "What does cProfile report?", back: "Per-function call counts plus total and cumulative time, from deterministic profiling." }
+    - { front: "Average-case cost of `x in some_list` vs `x in some_set`?", back: "O(n) for a list (linear scan) vs O(1) average for a set or dict (hashing)." }
+    - { front: "Where does a process get environment variables such as PATH?", back: "They are inherited from the parent process when the program is started." }
+    - { front: "Contrapositive of P → Q?", back: "¬Q → ¬P; it is logically equivalent to P → Q." }
+    - { front: "Why give each project its own virtual environment (e.g. with uv)?", back: "To isolate and pin the project's dependencies so other projects cannot change them." }
+    - { front: "What is a pytest fixture?", back: "Reusable setup/teardown that pytest injects into a test by parameter name." }
+- slug: w02-c-memory
+  week: RI-W02
+  title: "C and memory"
+  body: lessons/w02-c-memory.mdx
+  resources: [csapp, cmu-15213, beej-net]
+  exercises: []
+  cards:
+    - { front: "Stack vs heap allocation in C?", back: "Stack: automatic storage in call frames, released on return. Heap: malloc/free, lifetime controlled by the program." }
+    - { front: "What is a use-after-free?", back: "Accessing memory after it was freed; undefined behaviour." }
+    - { front: "What kinds of bugs does AddressSanitizer report?", back: "Out-of-bounds accesses, use-after-free, double free and (with LeakSanitizer) leaks, via compiler instrumentation and shadow memory." }
+    - { front: "Name three sources of undefined behaviour in C.", back: "Signed integer overflow, out-of-bounds access, dereferencing a null or dangling pointer (others exist)." }
+    - { front: "Range of a 32-bit two's-complement integer?", back: "−2^31 to 2^31 − 1." }
+    - { front: "sizeof(int*) on 64-bit Linux (LP64)?", back: "8 bytes." }
+    - { front: "Why is `a == b` risky for floating-point values?", back: "Many decimals (e.g. 0.1) are not exactly representable and rounding accumulates; compare with a tolerance instead." }
+    - { front: "Bit layout of an IEEE-754 double?", back: "1 sign bit, 11 exponent bits, 52 fraction bits." }
+    - { front: "For `int *p`, how far does `p++` move?", back: "sizeof(int) bytes." }
+    - { front: "What is an arena allocator?", back: "Allocates by bumping a pointer inside a large block and frees the whole block at once: very cheap allocation, no individual free." }
+    - { front: "Bug in `for (i = 0; i <= n; i++) a[i] = 0;` when a has n elements?", back: "Off-by-one: it writes a[n], one past the end." }
+    - { front: "How does Valgrind memcheck differ from ASan?", back: "Memcheck runs the unmodified binary on a synthetic CPU (no recompilation, much slower); ASan needs a recompile and is faster." }
+    - { front: "Main regions of a process's memory?", back: "Text (code), data, bss, heap, memory-mapped regions and the stack." }
+    - { front: "What is a dangling pointer?", back: "A pointer to memory that has been freed or has gone out of scope." }
+    - { front: "Why report median and p99 over many runs instead of one timing?", back: "Single runs are noisy; the distribution (including its tail) is what you can reason about." }
+- slug: w03-caches
+  week: RI-W03
+  title: "Computer architecture and CPU caches"
+  body: lessons/w03-caches.mdx
+  resources: [csapp, cmu-15213, roofline-tr]
+  exercises: []
+  cards:
+    - { front: "Typical cache-line size on current x86-64 CPUs?", back: "64 bytes." }
+    - { front: "Spatial vs temporal locality?", back: "Spatial: you use data near what you just used. Temporal: you reuse the same data soon." }
+    - { front: "Why is row-order traversal of a C 2-D array faster?", back: "C arrays are row-major, so rows are contiguous and each cache line fetched is fully used." }
+    - { front: "Define arithmetic intensity.", back: "Floating-point operations per byte of memory traffic (FLOP/byte)." }
+    - { front: "Roofline formula for attainable performance?", back: "min(peak FLOP/s, arithmetic intensity × peak memory bandwidth)." }
+    - { front: "What is the ridge point of a roofline?", back: "The arithmetic intensity where the two roofs meet: peak FLOP/s ÷ peak bandwidth." }
+    - { front: "Why does blocking (tiling) speed up matmul?", back: "It works on sub-blocks that fit in cache, so each loaded value is reused many times before eviction." }
+    - { front: "What is false sharing?", back: "Threads write different variables that share one cache line, so the line bounces between cores." }
+    - { front: "How do you fix false sharing?", back: "Pad or align per-thread data so each sits on its own cache line." }
+    - { front: "What is IPC in `perf stat` output?", back: "Instructions retired per cycle." }
+    - { front: "Why is a mispredicted branch expensive?", back: "The pipeline must discard speculative work and refetch from the correct path." }
+    - { front: "FLOPs for a naive N×N×N matmul?", back: "2N³ (one multiply and one add per inner step)." }
+    - { front: "Caveat with `perf stat -e cache-misses`?", back: "It is a hardware counter whose exact meaning depends on the CPU model." }
+    - { front: "What does SIMD mean?", back: "One instruction operates on several data lanes at once." }
+    - { front: "Order the memory hierarchy from fastest to slowest.", back: "Registers, L1, L2, L3, main memory (DRAM)." }

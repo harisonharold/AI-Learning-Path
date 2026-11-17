@@ -8,6 +8,7 @@
   "properties": {
     "jobId": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
     "kind": { "enum": ["diag.echo"] },
-    "input": { "type": "object" }
+    "input": { "type": "object" },
+    "traceparent": { "type": "string", "pattern": "^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$" }
   }
 }

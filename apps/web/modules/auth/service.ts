@@ -30,3 +30,11 @@ export async function requireUser(req: Request, opts: { mutation?: boolean } = {
   const user = await getSessionUser(req.headers);
   return user ? { user } : { response: errors.unauthenticated() };
 }
+
+import { redirect } from "next/navigation";
+/** For server pages under (app): the layout already redirects anonymous users; this narrows the type. */
+export async function pageUser(): Promise<SessionUser> {
+  const u = await getSessionUser();
+  if (!u) redirect("/signin");
+  return u;
+}

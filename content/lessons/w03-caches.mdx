@@ -1,0 +1,31 @@
+## Objectives
+
+- Explain cache lines, locality, branch prediction and SIMD at a high level, and measure them.
+- Draw your machine's roofline from measured bandwidth and FLOP/s, and place kernels on it.
+
+## Locality
+
+Memory moves in **cache lines** (64 bytes on current x86-64 CPUs). Code that uses neighbouring data (**spatial locality**) or reuses data soon (**temporal locality**) runs from fast caches instead of DRAM. C arrays are row-major, so walking a row uses every byte of each line it fetches.
+
+## The roofline model
+
+The roofline model (Williams, Waterman and Patterson, Berkeley tech report EECS-2008-134) bounds attainable performance:
+
+```text
+attainable FLOP/s = min(peak FLOP/s, arithmetic intensity × peak bandwidth)
+```
+
+**Arithmetic intensity** is FLOPs per byte moved. Kernels left of the **ridge point** (peak FLOP/s ÷ bandwidth) are memory-bound; kernels to its right are compute-bound.
+
+```mermaid
+flowchart LR
+  L["low intensity: memory-bound"] --> R(("ridge point")) --> C["high intensity: compute-bound"]
+```
+
+## Why blocking works
+
+Naive N×N matmul does 2N³ FLOPs but, for large N, reloads the same values from memory many times. **Blocking** computes on tiles small enough to stay in cache, raising arithmetic intensity without changing the FLOP count.
+
+## This week's gate
+
+On your own machine at N=1024, blocked matmul must be at least 3× faster than naive. The target is relative, so any hardware works. You also place each variant correctly on your measured roofline. atlas-lab collects the timings (P2).

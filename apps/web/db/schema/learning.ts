@@ -124,6 +124,11 @@ export const attemptEvidence = mysqlTable(
       sql`(kind IN ('runner_result','server_graded','github_commit','github_ci','reviewer_score'))`,
       { mode: "stored" },
     ),
+    /** Outcome for objective evidence (true/false); null for artifacts (report/recording) and not-yet-run items. */
+    passed: boolean("passed"),
+    /** Which requirement it answers: runner ref (e.g. atlas-lab:w01@1) or quiz id. */
+    ref: varchar("ref", { length: 200 }),
+    quizId: varchar("quiz_id", { length: 64 }),
     url: varchar("url", { length: 500 }),
     commitSha: char("commit_sha", { length: 40 }),
     runnerRunId: fk("runner_run_id"),

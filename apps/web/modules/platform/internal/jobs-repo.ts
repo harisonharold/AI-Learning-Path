@@ -5,6 +5,7 @@ import { Queue } from "bullmq";
 import { getDb } from "../../../db/client.ts";
 import { jobs } from "../../../db/schema/index.ts";
 import { getRedis } from "./redis.ts";
+import { currentTraceparent } from "./telemetry.ts";
 
 export const QUEUES = { py: "atlas-py", node: "atlas-node" } as const;
 export type JobKind = "diag.echo";
@@ -25,7 +26,8 @@ function queue(name: string): Queue {
 export async function enqueueJob(userId: string, kind: JobKind, payload: Record<string, unknown>) {
   const id = randomUUID();
   await getDb().insert(jobs).values({ id, userId, kind, status: "queued", payloadJson: payload });
-  await queue(KIND_QUEUE[kind]).add(kind, { jobId: id, kind, input: payload }, {
+  const traceparent = currentTraceparent();
+  await queue(KIND_QUEUE[kind]).add(kind, { jobId: id, kind, input: payload, ...(traceparent ? { traceparent } : {}) }, {
     jobId: id,
     attempts: 5,
     backoff: { type: "exponential", delay: 2000 },

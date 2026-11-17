@@ -15,7 +15,7 @@ export function proxy(req: NextRequest) {
   if (sandbox && host === sandbox.host) {
     if (!path.startsWith("/sandbox/")) return new NextResponse("Not found", { status: 404 });
     const res = NextResponse.next();
-    res.headers.set("content-security-policy", `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; frame-ancestors ${app?.origin ?? "'none'"}; object-src 'none'; base-uri 'none'`);
+    res.headers.set("content-security-policy", `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; frame-ancestors ${app?.origin ?? "'none'"}; object-src 'none'; base-uri 'none'; form-action 'none'`);
     res.headers.set("cross-origin-resource-policy", "cross-origin");
     return res;
   }
@@ -28,9 +28,10 @@ export function proxy(req: NextRequest) {
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://avatars.githubusercontent.com",
-    "font-src 'self'",
+    "font-src 'self' data:", // Monaco ships its icon font inline
     `connect-src 'self'${dev ? " ws:" : ""}`,
     `frame-src ${sandbox?.origin ?? "'none'"}`,
+    "worker-src 'self' blob:", // Monaco web workers (self-hosted under /monaco)
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'none'",

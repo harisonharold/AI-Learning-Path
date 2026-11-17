@@ -36,7 +36,16 @@ export function Shell({ user, children }: { user: { name: string }; children: Re
         if (target) { e.preventDefault(); router.push(target.href); }
         return;
       }
-      if (e.key === "g") { pending.current = "g"; setTimeout(() => (pending.current = null), 1200); }
+      if (e.key === "g") { pending.current = "g"; setTimeout(() => (pending.current = null), 1200); return; }
+      if (e.key === "j" || e.key === "k") {
+        // j/k: next/previous item in the focused (or first) list marked data-keylist (E.2).
+        const list = (document.activeElement?.closest("[data-keylist]") ?? document.querySelector("main [data-keylist]")) as HTMLElement | null;
+        const items = list ? [...list.querySelectorAll<HTMLElement>("[data-keylist-item]")] : [];
+        if (!items.length) return;
+        e.preventDefault();
+        const i = items.indexOf(document.activeElement as HTMLElement);
+        items[e.key === "j" ? Math.min(i + 1, items.length - 1) : Math.max(i - 1, 0)]!.focus();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

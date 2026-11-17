@@ -59,7 +59,7 @@ Format: threat → mitigation → test.
 ### TB2 Pyodide iframe ⇄ app
 | ID | | Threat | Mitigation | Test |
 |---|---|---|---|---|
-| T-B1 | E | Code run in Pyodide (pasted snippet, poisoned lesson/mentor output) calls `/api/*` with the session cookie or reads app DOM/storage | Pyodide runs **only** on `SANDBOX_ORIGIN`, a different host: static files, no `/api`, never `Set-Cookie`; app session cookie is host-only so it is never sent there; app CSP `frame-src SANDBOX_ORIGIN`, sandbox CSP `connect-src 'self'` + `frame-ancestors APP_ORIGIN`; iframe `sandbox="allow-scripts allow-same-origin"` (grants only the sandbox's own origin); a cross-origin `fetch` to `APP_ORIGIN` carries no credentials and is refused by CORS; parent accepts `postMessage` only from `SANDBOX_ORIGIN`, Zod-validated | X-05 |
+| T-B1 | E | Code run in Pyodide (pasted snippet, poisoned lesson/mentor output) calls `/api/*` with the session cookie or reads app DOM/storage | Pyodide runs **only** on `SANDBOX_ORIGIN`, a different host: only `/sandbox/*` exists there (Caddy proxies just that path to web, stripping `Cookie`/`Authorization` in and `Set-Cookie` out; web's `proxy.ts` also 404s everything else on that host), no `/api`, never `Set-Cookie`; the iframe `src` is set in the browser after mount so the runner always knows its one allowed parent origin; app session cookie is host-only so it is never sent there; app CSP `frame-src SANDBOX_ORIGIN`, sandbox CSP `connect-src 'self'` + `frame-ancestors APP_ORIGIN`; iframe `sandbox="allow-scripts allow-same-origin"` (grants only the sandbox's own origin); a cross-origin `fetch` to `APP_ORIGIN` carries no credentials and is refused by CORS; parent accepts `postMessage` only from `SANDBOX_ORIGIN`, Zod-validated | X-05 |
 | T-B2 | T | Practice results forged in the browser and used to pass a gate | Browser results are **practice checks**: `attempts.status = practice` enforced by DB CHECK, ignored by `gateState()`; gates count only server-side evidence (server-graded answers, GitHub-API-verified commits/CI, reviewer scores, server-revalidated uploads) or atlas-lab results | AT-08 (reworded), X-13 |
 | T-B3 | I | Hidden tests / answer keys exposed | Only public practice tests are served (on the sandbox origin); gate test bundles go only to atlas-lab with a runner token; MCQ/short-answer keys stay server-side; solutions served only after gate pass | X-06 |
 | T-B4 | D | Infinite loop freezes the tab | Pyodide in a Web Worker inside the sandbox frame; terminate on timeout; the app page stays responsive because the frame is cross-origin (separate process where the browser isolates sites) | e2e |
@@ -73,6 +73,8 @@ Format: threat → mitigation → test.
 | T-W3 | I | api-py exposed publicly | No published ports in prod; HMAC required even internally | Compose config test |
 | T-W4 | D | Large stats payloads exhaust api-py | Body limit, sample cap, 5 s timeout; heavy work goes to worker-py | U test |
 | T-W5 | E | Internet reaches `/api/internal/*` through Caddy | Caddy `respond /api/internal/* 404`; HMAC still required | X-02 |
+
+| T-W6 | I | Traces (OTel) carry secrets, cookies or tokens to Jaeger or a hosted backend | Redacting span exporter in web and in the Python services (same rules as logs: sensitive keys + registered secret values); tracing off in production unless an endpoint is configured | `modules/platform/tests/telemetry.test.ts`, `services/common/tests/test_telemetry.py` |
 
 ### TB4/TB5 Redis, MySQL
 | ID | | Threat | Mitigation | Test |
@@ -171,7 +173,7 @@ Edition note (**UNVERIFIED until X-15**, a P7 exit condition): mapped to the **O
 | A06 Insecure Design | self-scored exams (Q6), browser-run tests (T-B2), budget race (L3) | X-11, X-08 |
 | A07 Authentication Failures | T-A1, T-A7, T-R1 | X-01, AT-02, AT-18 |
 | A08 Software/Data Integrity | T-R2, T-G4, T-W1/2, T-C1 | AT-05, AT-15, AT-31, X-10 |
-| A09 Logging & Alerting | T-A8; redaction (X-03); alert when GitHub permissions change | X-03 |
+| A09 Logging & Alerting | T-A8; redaction of logs and traces (X-03, T-W6); alert when GitHub permissions change | X-03, telemetry tests |
 | A10 Exceptional Conditions | Degradation table D.7; fail closed on budget/HMAC/authz errors | AT-29, AT-32, AT-47 |
 
 ## 6. OWASP Top 10 for LLM Applications mapping

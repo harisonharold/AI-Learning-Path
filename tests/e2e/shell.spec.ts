@@ -38,8 +38,8 @@ test("security headers: nonce CSP, frame-src limited to the sandbox origin, no f
 });
 
 test("sandbox host split (D-14, P0 part): the app host 404s /sandbox; the sandbox host serves only /sandbox and sets no cookies", async ({ request }) => {
-  expect((await request.get("http://localhost:3000/sandbox/index.html")).status()).toBe(404);
-  const sb = await request.get("http://127.0.0.1:3000/sandbox/index.html");
+  expect((await request.get("http://localhost:3000/sandbox/runner.html")).status()).toBe(404);
+  const sb = await request.get("http://127.0.0.1:3000/sandbox/runner.html");
   expect(sb.status()).toBe(200);
   expect(sb.headers()["set-cookie"]).toBeUndefined();
   expect((await request.get("http://127.0.0.1:3000/api/me")).status()).toBe(404);

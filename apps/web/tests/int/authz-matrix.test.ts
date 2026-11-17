@@ -2,6 +2,9 @@ import { readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { attempts, cards } from "../../db/schema/index.ts";
+import { addLessonCards, seed } from "../../modules/learning/service.ts";
 import { closeQueues, enqueueJob } from "../../modules/platform/internal/jobs-repo.ts";
 import { ROUTES } from "../../modules/platform/route-manifest.ts";
 import { fixtureUser, req, testEnv } from "./helpers.ts";
@@ -19,10 +22,17 @@ function routeFiles(dir: string): string[] {
 let a: Awaited<ReturnType<typeof fixtureUser>>;
 let b: Awaited<ReturnType<typeof fixtureUser>>;
 let jobOfB = "";
+const ownedOfB: Record<string, string> = {};
 beforeAll(async () => {
+  await seed();
   a = await fixtureUser(db, "123658133");
   b = await fixtureUser(db, "424242");
   jobOfB = await enqueueJob(b.id, "diag.echo", { message: "b's job" });
+  ownedOfB.job = jobOfB;
+  await addLessonCards(b.id, "w01-tooling");
+  ownedOfB.card = String((await db.select({ id: cards.id }).from(cards).where(eq(cards.userId, b.id)).limit(1))[0]!.id);
+  const [att] = await db.insert(attempts).values({ userId: b.id, gateId: "g-w02", source: "manual", status: "pending_evidence", contentVersion: "t" }).$returningId();
+  ownedOfB.attempt = String(att!.id);
 });
 afterAll(async () => { await closeQueues(); });
 
@@ -49,16 +59,20 @@ describe("AT-04 every session route refuses anonymous callers", () => {
 
 describe("AT-04 user A cannot read user B's resources", () => {
   for (const r of ROUTES.filter((x) => x.owned)) {
-    it(`${r.owned!.method} ${r.file} with A's session on B's ${r.owned!.resource} -> 403`, async () => {
+    const o = r.owned!;
+    const call = async (cookie: string) => {
+      const id = ownedOfB[o.resource]!;
       const mod = await import(/* @vite-ignore */ join(root, r.file));
-      const res: Response = await mod[r.owned!.method](req(url(r.file, jobOfB), { method: r.owned!.method, cookie: a.cookie, sameOrigin: true }), { params: Promise.resolve({ id: jobOfB }) });
+      const init = { method: o.method, cookie, sameOrigin: true, ...(o.body ? { body: JSON.stringify(o.body), headers: { "content-type": "application/json" } } : {}) };
+      return (await mod[o.method](req(url(r.file, id), init), { params: Promise.resolve({ id }) })) as Response;
+    };
+    it(`${o.method} ${r.file} with A's session on B's ${o.resource} -> 403`, async () => {
+      const res = await call(a.cookie);
       expect(res.status).toBe(403);
       expect(await res.text()).not.toContain("b's job");
     });
-    it(`${r.owned!.method} ${r.file} with B's own session -> 200`, async () => {
-      const mod = await import(/* @vite-ignore */ join(root, r.file));
-      const res: Response = await mod[r.owned!.method](req(url(r.file, jobOfB), { method: r.owned!.method, cookie: b.cookie }), { params: Promise.resolve({ id: jobOfB }) });
-      expect(res.status).toBe(200);
+    it(`${o.method} ${r.file} with B's own session -> 2xx`, async () => {
+      expect((await call(b.cookie)).status).toBeLessThan(300);
     });
   }
   it("GET /api/jobs lists only the caller's jobs", async () => {

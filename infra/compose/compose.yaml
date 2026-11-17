@@ -3,6 +3,8 @@ name: systems-atlas
 
 x-hmac: &hmac
   INTERNAL_HMAC_KEY: ${INTERNAL_HMAC_KEY:?run infra/scripts/gen-env.sh}
+  # Traces go to the dev Jaeger; the production overlay clears this unless you set an endpoint.
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT-http://jaeger:4318}
 
 networks:
   internal:

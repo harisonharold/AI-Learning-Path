@@ -1,5 +1,100 @@
 # PROGRESS.md
 
+## 2026-11-17 — P1 Learning core (finished on branch `p1-learning-core`; awaiting review)
+
+### Built
+- **CI hardening (D-38):** every GitHub Action is pinned to a full commit SHA (taken from CI run 43916244822's own logs). A unit test fails on any unpinned `uses:`. CI runs the Python checks on 3.12.
+- **Content (`content/`):**
+  - 24 Research-Intensive weeks and 16 Accelerated weeks, with every gate, required evidence item, rubric and remediation track from specs B and H.
+  - The skill graph and the "weeks 18+ need the W12 and W15 exams" rule.
+  - 14 sources, all from SOURCES.md with their check date; the GitHub revoke link is marked unverified.
+  - Lessons for weeks 1-3, each with 15 must-know cards; the week 1 retrieval quiz; the week 1 practice exercise; a 14-item diagnostic.
+  - The loader validates everything with Zod and cross-checks references and cycles.
+- **Learning rules (`modules/learning`):**
+  - Gate evaluation counts only verified counting evidence and applies the rubric rule (no "missing", at least half competent). AI-suggested scores never count; self-scores are labelled.
+  - Roadmap locks take no time input at all; the hours-never-unlock rule is enforced at compile time.
+  - Remediation locks only dependent weeks; FSRS scheduling via ts-fsrs 5.4.2.
+  - Quizzes are graded on the server; diagnostic skips are limited to weeks 1-3; the learning meter excludes sample data; the finish estimate uses your actual pace after week 2.
+- **API:** 20 new routes (27 in total), all in the route manifest. The cross-user test now also covers another user's cards and attempts.
+- **Pages:**
+  - Today: meter, today's plan, current gate, estimate.
+  - Diagnostic: one task per screen, timer, pause, autosave, "I don't know"; result page with skill map and recommendation.
+  - Roadmap: React Flow graph, timeline and list.
+  - Learn and the lesson viewer: outline, MDX + Shiki, runnable snippets, Mermaid with a text version, cards, resources with verified/stale badges and "report a broken link".
+  - Gate: requirements checklist, quiz, artifact links, self-scored rubric.
+  - Exercise: Monaco over a textarea, practice checks, hint ladder with counter, atlas-lab command, solution only after the gate passes.
+  - Daily workspace (quiz first, then timed tasks), Progress analytics, and plan settings.
+- **Sandbox (D-14, D-46):** self-hosted Pyodide in a module worker on `SANDBOX_ORIGIN`, with a time limit and origin-checked, Zod-validated messages. In production Caddy proxies only `/sandbox/*` there and strips cookies both ways.
+- **OpenTelemetry (D-42):** web, api-py and worker-py export to Jaeger in dev, with redacting exporters. A job is one trace across web, worker-py and the signed callback.
+- **Fonts:** self-hosted Inter, Source Serif 4 and JetBrains Mono; all SIL OFL 1.1, checked against each package's LICENSE.
+
+### Tested (local, 2026-11-17, and on GitHub CI)
+| Suite | Result |
+|---|---|
+| Lint (boundaries included) / strict typecheck | clean |
+| Web unit | 162 passed (15 files) |
+| UI contrast / worker-node | 71 / 2 passed |
+| Integration (Testcontainers MySQL 8.4 + Redis 7) | 82 passed |
+| Python (ruff, pyright strict, pytest) | clean, 41 passed |
+| Playwright | 65 passed: 25 e2e + 40 axe (20 pages × 2 themes) |
+| AT-01 compose smoke | pass |
+| AT-03 + X-06 bundle scan | 0 findings in `.next/static` (119 files) and the sandbox files, 9 canaries incl. answer keys and solution |
+| X-02 Caddy edge | 9/9 checks |
+
+**GitHub CI:** run [44027085773](https://github.com/harisonharold/AI-Learning-Path/actions/runs/44027085773) on `1fa56de` passed all four jobs, with every action pinned to a commit SHA. The run before it, 44025714721, failed one browser test; see below.
+
+Acceptance tests covered in P1:
+- **AT-06:** unit test, including a compile-time check that the lock function has no time input, plus an integration test logging 100 hours.
+- **AT-07:** unit and integration.
+- **AT-08:** e2e. It runs the correct solution in Pyodide, records a practice attempt, and asserts no request body to the server contains code.
+- **AT-09:** unit and integration.
+- **AT-10:** unit and integration.
+- **AT-11:** unit and integration (a failed W3 locks W8 but not W4 or W7).
+- **AT-12:** unit, integration and e2e (a resource forced to an older date shows "Stale").
+- **AT-13:** axe on every P1 page in both themes.
+- **AT-14:** keyboard-only e2e covering Today, the quiz, a lesson and an exercise.
+- **X-05:**
+  - The sandbox iframe's origin differs from the app's.
+  - `document.cookie` inside it is empty and `/api/me` there returns 404.
+  - Learner code's `pyfetch` to the app fails.
+  - Messages from any other origin are ignored.
+- **X-06:** API tests plus the canary bundle scan.
+- **X-11 / X-13:** unit, integration and the database CHECK constraints.
+- **X-03 for traces:** TS and Python tests.
+- **Tracing:** e2e checks that a job is one trace across web and worker-py in Jaeger.
+
+### Failed, then fixed during P1 (not hidden)
+- **Diagnostic autosave race (found by CI):** CI run 44025714721 failed one of 65 browser tests. The page showed "Paused. Your answers are saved" before the save request finished, and a reload could beat it. Saves now run one after another, the paused view shows the real save status, and the test waits for "saved".
+- **Sandbox never ready:** the iframe `src` was computed during server render, so the page shipped an empty parent origin and the runner refused to start. It is now set on the element after mount.
+- **Accessibility (found by axe):**
+  - Resource links weren't underlined.
+  - A scrollable code block wasn't keyboard-focusable.
+  - Mermaid's and Monaco's dark themes failed contrast (now explicit token colours and `hc-black`).
+- **Caddy:** a nested env default (`{$A:{$B}}`) isn't expanded and sent `Host: …}`; the upstream host is now passed explicitly.
+- **Monaco icon font:** blocked by CSP; `font-src data:` added.
+- **Lesson timing:** the set timing showed 0.000 µs because browser timers are coarse; more repeats.
+- **Build tracing:** the content path caused whole-project tracing; excluded.
+- **Test bugs:** an expected status, and a schema test that duplicated seeded rows.
+- **Environment:** the Docker daemon in this cloud container stopped twice between turns and was restarted; nothing in the repo depended on it.
+
+### Not done / limits (honest)
+- **Code-test gates can't pass yet (D-45):** objective results come only from atlas-lab, which is P2. Until then the UI says "pending evidence — run with atlas-lab"; the tests stand in for atlas-lab with labelled DB fixtures.
+- **Lessons for weeks 4-24 aren't written (Q25).** Their objectives, gates and rubrics are in the curriculum.
+- **The diagnostic's code task is self-reported:** it shapes the skill map only and never skips a week.
+- **Two P1-referenced quizzes don't exist yet:** `q-w04` and `q-w20-exam`. Those gates show "quiz content arrives with this week's lessons".
+- **Progress analytics has tables, no charts yet:** ECharts arrives with P2 benchmark analytics.
+- **GitHub Actions run v4 actions on deprecated Node 20:** a CI warning; tracked in TASKS.
+
+### Mock data
+None in the product. Test-only: the mock GitHub OAuth server, and e2e/integration fixtures that write labelled stand-in atlas-lab results straight to the DB.
+
+### What I need from you
+1. Review of PR #1 (P0), and of this branch (P1) once you want a PR for it.
+2. Decisions **D-40…D-51** (PLAN §9), especially D-41 (ts-fsrs 5.4.2 because of Node 22), D-45 (no code gate can pass before atlas-lab) and D-46 (sandbox proxied through Caddy).
+3. **Q25** (lesson-writing order for weeks 4-24) and **Q26** (move to Node 24 in P2).
+4. "Go" for P2.
+
+
 ## 2026-11-16: Repository move to AI-Learning-Path + P0 review
 
 - **Home repository:** https://github.com/harisonharold/AI-Learning-Path, branch `ccr-42198ca2-6rc626`. `main` is untouched (`d54d076`, your original README).

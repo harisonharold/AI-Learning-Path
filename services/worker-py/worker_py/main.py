@@ -11,7 +11,9 @@ import redis
 from atlas_common.env import CommonEnv, load
 from atlas_common.health import serve_health
 from atlas_common.logging_json import log, register_secrets
+from atlas_common.telemetry import context_from_traceparent, setup_tracing
 from bullmq import Job, Worker  # pyright: ignore[reportMissingTypeStubs]
+from opentelemetry import trace
 
 from worker_py.callback import post_result
 from worker_py.handlers import handle
@@ -27,6 +29,8 @@ class Env(CommonEnv):
 async def run() -> None:
     env = load(Env)
     register_secrets([env.INTERNAL_HMAC_KEY])
+    setup_tracing("worker-py")
+    tracer = trace.get_tracer("worker-py")
     http = httpx.Client()
     ping = redis.Redis.from_url(env.REDIS_URL, socket_timeout=2)
 
@@ -40,6 +44,13 @@ async def run() -> None:
 
     async def process(job: Job, _token: str) -> dict[str, Any]:
         data: dict[str, Any] = job.data  # pyright: ignore[reportUnknownMemberType]
+        parent = context_from_traceparent(data.get("traceparent"))
+        with tracer.start_as_current_span(
+            f"job {data.get('kind')}", context=parent, attributes={"atlas.job_id": str(data.get("jobId"))}
+        ):
+            return await run_job(job, data)
+
+    async def run_job(job: Job, data: dict[str, Any]) -> dict[str, Any]:
         job_id = str(data["jobId"])
         attempts = int(job.attemptsMade) + 1  # pyright: ignore[reportUnknownArgumentType]
         max_attempts = int(job.opts.get("attempts", 1))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]

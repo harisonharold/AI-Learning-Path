@@ -20,9 +20,11 @@ const patterns = [
   ["Redis URL with password", /redis:\/\/[^@\s"']*:[^@\s"']+@/],
 ];
 
+const exclude = process.env.SCAN_EXCLUDE ? new RegExp(`(^|/)(${process.env.SCAN_EXCLUDE})(/|$)`) : null;
 function* files(d) {
   for (const f of readdirSync(d)) {
     const p = join(d, f);
+    if (exclude?.test(p)) continue;
     if (statSync(p).isDirectory()) yield* files(p);
     else yield p;
   }

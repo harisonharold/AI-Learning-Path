@@ -9,12 +9,18 @@
 	reverse_proxy web:3000
 }
 
-# Static Pyodide runner only: never proxied to web, so no /api and no cookies exist here.
+# Sandbox origin (PLAN D-14): only /sandbox/* (runner page, worker, self-hosted Pyodide) is reachable. Cookies are
+# stripped in both directions, and web's own proxy.ts also serves nothing but /sandbox/* on this host.
 {$SANDBOX_HOST} {
 	@notsandbox not path /sandbox/*
 	respond @notsandbox 404
+	request_header -Cookie
+	request_header -Authorization
 	header -Set-Cookie
-	header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; frame-ancestors {$APP_ORIGIN}; object-src 'none'; base-uri 'none'"
-	root * /srv
-	file_server
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; frame-ancestors {$APP_ORIGIN}; object-src 'none'; base-uri 'none'; form-action 'none'"
+	reverse_proxy web:3000 {
+		# web decides "sandbox host" by Host; in tests the upstream sandbox host differs from the public one.
+		header_up Host {$SANDBOX_UPSTREAM_HOST}
+		header_down -Set-Cookie
+	}
 }

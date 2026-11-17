@@ -69,8 +69,14 @@ def create_app(env: Env | None = None, store: NonceStore | None = None) -> FastA
 
 def main() -> None:
     import uvicorn
+    from atlas_common.telemetry import setup_tracing
 
-    uvicorn.run(create_app(), host="0.0.0.0", port=8000, log_level="warning")  # noqa: S104 - container port
+    app = create_app()
+    if setup_tracing("api-py"):
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        FastAPIInstrumentor.instrument_app(app, excluded_urls="healthz")
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")  # noqa: S104 - container port
 
 
 if __name__ == "__main__":

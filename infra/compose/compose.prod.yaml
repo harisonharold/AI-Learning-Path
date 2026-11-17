@@ -8,7 +8,17 @@ services:
     ports: !reset []
     environment:
       ATLAS_ENV: production
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     networks: [internal, edge]
+  api-py:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  worker-py:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+  worker-node:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   caddy:
     image: caddy:2.10-alpine
     ports: ["80:80", "443:443"]
@@ -16,9 +26,10 @@ services:
       APP_HOST: ${APP_HOST:?}
       SANDBOX_HOST: ${SANDBOX_HOST:?}
       APP_ORIGIN: https://${APP_HOST}
+      # Host header web sees for the sandbox; must equal the host of web's SANDBOX_ORIGIN.
+      SANDBOX_UPSTREAM_HOST: ${SANDBOX_HOST:?}
     volumes:
       - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../../apps/web/public/sandbox:/srv/sandbox:ro
       - caddy-data:/data
     networks: [edge]
     depends_on: [web]

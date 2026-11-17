@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
-import { attempts, gates, papers, sources, user, weeks } from "../../db/schema/index.ts";
+import { attempts, papers, sources, user } from "../../db/schema/index.ts";
+import { seed } from "../../modules/learning/service.ts";
 import { testEnv } from "./helpers.ts";
 
 const { db } = testEnv();
 const uid = randomUUID();
 
 beforeAll(async () => {
-  await db.insert(user).values({ id: uid, name: "schema", email: "schema@example.test" });
-  await db.insert(weeks).values({ id: "RI-W01", mode: "RI", ordinal: 1, title: "W1", hardware: "CPU", contentVersion: "v0", riWeekIds: ["RI-W01"] });
-  await db.insert(gates).values({ id: "g-w01", weekId: "RI-W01", kind: "tests", requiredEvidence: [], skillIds: [], contentVersion: "v0" });
+  await seed(); // curriculum rows (weeks, gates) come from content/
+  await db.insert(user).values({ id: uid, name: "schema", email: `schema-${uid.slice(0, 8)}@example.test` });
 });
 
 const violation = async (p: Promise<unknown>) => {
@@ -39,7 +39,7 @@ describe("X-13 (DB layer): browser results can only be practice checks", () => {
 
 describe("FULLTEXT on papers indexes two-letter terms", () => {
   it("finds a paper by 'KV'", async () => {
-    const [s] = await db.insert(sources).values({ kind: "paper", url: "https://arxiv.org/abs/2310.07240", urlHash: "a".repeat(64), title: "CacheGen", verification: "verified", verifiedAt: new Date(), lastCheckedAt: new Date() }).$returningId();
+    const [s] = await db.insert(sources).values({ kind: "paper", url: "https://arxiv.org/abs/2310.07240", urlHash: "b".repeat(64), title: "CacheGen", verification: "verified", verifiedAt: new Date(), lastCheckedAt: new Date() }).$returningId();
     await db.insert(papers).values({ userId: uid, sourceId: s!.id, title: "CacheGen: KV Cache Compression and Streaming", abstract: "We compress the KV cache." });
     const [rows] = await db.execute(sql`SELECT title FROM papers WHERE MATCH(title, abstract, user_notes) AGAINST ('KV' IN NATURAL LANGUAGE MODE)`);
     expect((rows as unknown as { title: string }[]).map((r) => r.title)).toContain("CacheGen: KV Cache Compression and Streaming");

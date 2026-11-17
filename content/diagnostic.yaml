@@ -1,0 +1,25 @@
+# Diagnostic (B.2 Week 0, E.3 §2). About 4 h when the code tasks are done properly; can pause; one task per screen.
+# MCQ answers are server-side only. "I don't know" is always offered and is better data than a guess.
+# Results build the skill map and a recommendation. A week can be skipped only for RI W1-W3 (Q5) and only when
+# that week's gate has counting evidence (atlas-lab results or server-graded answers), never from browser runs (Q23).
+id: diagnostic-v1
+canary: "atlas-answer-key-canary-diagnostic-a7b2"
+items:
+  - { id: d-py-1, skill: py-tooling, kind: mcq, prompt: "What does `sorted(d)` return for a dict `d`?", choices: ["The values, sorted", "The keys, sorted", "(key, value) pairs, sorted", "A sorted dict"], answer: 1 }
+  - { id: d-py-2, skill: py-tooling, kind: mcq, prompt: "Which is true of Python default arguments like `def f(x=[])`?", choices: ["A new list is made on every call", "The same list object is reused across calls", "It is a syntax error", "The list is frozen"], answer: 1 }
+  - { id: d-sh-1, skill: py-tooling, kind: mcq, prompt: "Which command counts the lines of `app.log` that contain `ERROR`?", choices: ["cat app.log | wc -c ERROR", "grep -c ERROR app.log", "ls ERROR app.log", "echo ERROR > app.log"], answer: 1 }
+  - { id: d-git-1, skill: py-tooling, kind: mcq, prompt: "A test passes on commit A and fails on commit B, 200 commits later. Fastest way to find the culprit?", choices: ["Read every diff", "git bisect", "git revert B", "git stash"], answer: 1 }
+  - { id: d-trace-1, skill: py-tooling, kind: mcq, prompt: "A traceback ends with `KeyError: 'user'` at `cfg['user']`. What happened?", choices: ["cfg is None", "The dict has no key 'user'", "'user' is misspelled in the import", "The file was not found"], answer: 1 }
+  - { id: d-c-1, skill: c-memory, kind: mcq, prompt: "`int a[4]; int *p = a; p += 2;` Which element does `*p` refer to?", choices: ["a[0]", "a[1]", "a[2]", "a[8]"], answer: 2 }
+  - { id: d-c-2, skill: c-memory, kind: mcq, prompt: "A function returns a pointer to one of its local (stack) arrays. What is wrong?", choices: ["Nothing", "The pointer dangles once the function returns", "It leaks memory", "It is a compile error in all compilers"], answer: 1 }
+  - { id: d-c-3, skill: c-memory, kind: mcq, prompt: "Range of a signed 8-bit two's-complement integer?", choices: ["0 to 255", "-127 to 127", "-128 to 127", "-256 to 255"], answer: 2 }
+  - { id: d-bigo-1, skill: caches-arch, kind: mcq, prompt: "Naive multiplication of two N×N matrices does how many floating-point operations?", choices: ["N²", "2N²", "2N³", "N log N"], answer: 2 }
+  - { id: d-bigo-2, skill: py-tooling, kind: mcq, prompt: "Time complexity of binary search on a sorted array of n items?", choices: ["O(1)", "O(log n)", "O(n)", "O(n log n)"], answer: 1 }
+  - { id: d-arch-1, skill: caches-arch, kind: mcq, prompt: "Iterating a large C 2-D array column by column is usually slower than row by row because...", choices: ["columns use more FLOPs", "row-major layout makes row walks use whole cache lines", "the compiler forbids column loops", "columns are stored on disk"], answer: 1 }
+  - { id: d-prob-1, skill: numerics, kind: mcq, prompt: "Two fair coins are flipped. Probability of at least one head?", choices: ["1/4", "1/2", "3/4", "1"], answer: 2 }
+  - { id: d-short-1, skill: concurrency, kind: short_answer, prompt: "In two or three sentences: what is a race condition, and how would you show one exists?" }
+  - id: d-code-1
+    skill: py-tooling
+    kind: code
+    prompt: "Practice task: write `count_levels(lines)` (same as the week 1 exercise). Browser results shape your skill map but cannot skip a week; to skip week 1, run its gate with atlas-lab (arrives in P2)."
+    exercise: ex-w01-log-levels
