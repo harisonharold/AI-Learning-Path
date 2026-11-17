@@ -58,7 +58,7 @@ Status: `done` = its tests pass; `todo`; `blocked` = waiting on Harison.
 | Benchmark analytics page (ECharts, data-table toggle and text summary per chart) | todo |
 | Report generator with the baseline rule (Markdown/HTML) | todo |
 | Mock banner + sample-data toggle | todo |
-| Move the stack to Node 24 (Q26) | todo, needs approval |
+| Move the stack to Node 24 (Q26) | done (D-52, PR for `p2-node24`) |
 
 ## Revisit later
 | Task | Trigger | Status |
@@ -66,5 +66,5 @@ Status: `done` = its tests pass; `todo`; `blocked` = waiting on Harison.
 | Move to ESLint 10 (D-29) | `eslint-config-next` and its plugins (react, import, jsx-a11y) declare ESLint 10 support | todo, check at each Next.js minor upgrade |
 | Move to TypeScript 7 (D-30) | Next.js and typescript-eslint support the TS 7 native compiler | todo, check at each Next.js minor upgrade |
 | Better Auth tables vs upstream schema (D-36) | any better-auth upgrade | todo, re-diff core schema on upgrade |
-| Move to ts-fsrs 6 (D-41) | the stack runs Node 24 (Q26) | todo |
+| Move to ts-fsrs 6 (D-41) | the stack runs Node 24 (Q26) | done (D-52) |
 | Upgrade GitHub Actions majors (checkout/setup-node/pnpm v4 run on deprecated Node 20, per CI warnings) | before Node 20 actions stop working | todo; re-pin SHAs from the CI log |

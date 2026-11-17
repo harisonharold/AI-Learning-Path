@@ -20,6 +20,15 @@ describe("AT-09 (scheduling part): FSRS review updates due_at per ts-fsrs", () =
     for (let i = 0; i < 3; i++) { const r = review(s, 3, when); s = r.state; when = r.due; }
     expect(review(s, 3, when).scheduledDays).toBeGreaterThanOrEqual(1);
   });
+  it("elapsed days are whole days since the previous review (0 for a new card)", () => {
+    const first = review(newCardState(now), 3, now);
+    expect(first.elapsedDays).toBe(0);
+    expect(review(first.state, 3, t(3 * 24 * 60 + 5)).elapsedDays).toBe(3);
+  });
+  it("a card stored under ts-fsrs 5.x (with elapsed_days) still schedules", () => {
+    const legacy = { ...newCardState(now), elapsed_days: 0 };
+    expect(review(legacy, 3, now).due.getTime()).toBeGreaterThan(now.getTime());
+  });
 });
 
 describe("server-graded quizzes", () => {

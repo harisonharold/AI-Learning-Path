@@ -10,7 +10,7 @@ Status: **phase P0 (groundwork)**. See `PROGRESS.md` for what works and what doe
 
 ## Run it (one command)
 
-Requirements: Docker with Compose v2, Node ≥ 22.18, pnpm 10 (`corepack enable`).
+Requirements: Docker with Compose v2, Node ≥ 24, pnpm 10 (`corepack enable`).
 
 ```sh
 pnpm install

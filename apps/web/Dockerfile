@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Optional: behind a TLS-intercepting proxy, pass HTTPS_PROXY as a build arg and the proxy CA as the
 # BuildKit secret "extra_ca". Both are no-ops when absent and never end up in an image layer.
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 WORKDIR /repo
 ARG HTTPS_PROXY
 ARG NO_PROXY
@@ -25,7 +25,7 @@ COPY content ./content
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @atlas/web build
 
-FROM node:22-alpine AS run
+FROM node:24-alpine AS run
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 MIGRATIONS_DIR=/app/migrations CONTENT_DIR=/app/content
 RUN addgroup -S atlas && adduser -S atlas -G atlas

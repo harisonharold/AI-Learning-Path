@@ -1,6 +1,6 @@
 # PLAN.md — Systems Atlas
 
-Status: **P0 done (PR #1, awaiting review). P1 done on branch `p1-learning-core` (2026-11-17), awaiting review.** P2 has not started. Progress and test results: `PROGRESS.md`.
+Status: **P0 done (PR #1) and P1 done (PR #2), both awaiting merge; D-40…D-51 approved 2026-11-17. P2 in progress; it starts with the Node 24 move (D-52, its own PR).** Progress and test results: `PROGRESS.md`.
 
 Authoritative spec: `docs/spec/G_claude_code_prompt.md` (wins on conflict). Supporting: `docs/spec/{A..F,H}_*.md`, `docs/spec/SOURCES.md`. This plan references those files by section instead of restating them.
 
@@ -332,8 +332,8 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 | ● Q21 | Production hostname for `SANDBOX_ORIGIN`: a subdomain (`sandbox.<app-domain>`) or a separate registrable domain? Both are cross-origin and receive no cookies (host-only cookies); a separate domain is also cross-*site*, which is stricter for future browser features but costs a second domain. | D-14 | Subdomain; no new cost. Needed before the first VM deploy, not before P0 |
 | ● Q22 | Your GitHub **numeric** user id for `ALLOWED_GITHUB_USER_ID` (a login can be renamed and re-registered by someone else, an id can't). I can read it from the public `GET https://api.github.com/users/<login>` if you confirm the login is `harisonharold`. | X-01 | Builder looks it up at P0 start after you confirm the login |
 | Q23 | Consequence of D-15 for the diagnostic: skipping W1–W3 needs counting evidence, so the code parts of a skip must run through atlas-lab (installed during the diagnostic), not only in the browser. OK? | Q5 + D-15 | Yes; browser-only diagnostic results still shape the skill map but never skip a week |
-| Q25 | Lessons for weeks 4-24: the curriculum, gates and rubrics are all in `content/`, but lesson text exists only for weeks 1-3 (Q12). Write the next lessons per phase as weeks become reachable, or batch them? | Q12 | Write each week's lesson before a learner can reach it; W4-W8 next |
-| Q26 | ts-fsrs 6 and newer tools want Node 24. Move the stack to Node 24 (images, CI, `engines`) during P2? | D-41 | Yes, in P2, as its own small PR |
+| Q25 | Lessons for weeks 4-24: the curriculum, gates and rubrics are all in `content/`, but lesson text exists only for weeks 1-3 (Q12). Write the next lessons per phase as weeks become reachable, or batch them? | Q12 | **Resolved 2026-11-17:** W4-W8 next, and lessons always stay at least one week ahead of what the learner can reach. `q-w04` now; `q-w20-exam` later |
+| Q26 | ts-fsrs 6 and newer tools want Node 24. Move the stack to Node 24 (images, CI, `engines`) during P2? | D-41 | **Resolved 2026-11-17:** yes, at the start of P2, its own small PR (D-52) |
 | Q24 | Refreshing a GitHub user-to-server token is also a `POST` to `https://github.com/login/oauth/access_token` (`grant_type=refresh_token`). I treat "the OAuth token exchange" as covering both code exchange and refresh at that one endpoint, both in `modules/auth`. OK? | AT-27 reworded | Yes |
 
 ---
@@ -411,6 +411,7 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 | D-49 | Hint reveals are counted on the learner's practice attempt for that exercise (max 3) | E.3 §6 "honest counter" |
 | D-50 | CI runs the Python checks on 3.12 (`uv sync --python 3.12`), matching the Docker images, instead of the runner's default | consistency |
 | D-51 | The diagnostic's code task asks the learner to report the practice-check outcome; it shapes the skill map only and can never skip a week | D-15, Q23 |
+| D-52 | Node 24 everywhere (`node:24-alpine` images, CI `node-version: 24`, `engines >=24.0.0`, `@types/node` 24.19.2) and **ts-fsrs 6.0.0**, superseding D-41. ts-fsrs 6 dropped `elapsed_days`, so we compute whole days since the previous review ourselves; cards stored under 5.x load unchanged (extra fields are dropped) | Q26 approved |
 
 ---
 
