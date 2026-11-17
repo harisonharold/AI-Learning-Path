@@ -36,3 +36,21 @@ export async function signIn(page: Page, opts: { expectRefusal?: boolean; as?: {
   if (opts.expectRefusal) await page.waitForURL(/\/signin\?error=/);
   else await page.waitForURL(/\/today$/);
 }
+
+export const userId = () => sql("SELECT id FROM `user` LIMIT 1")[0]!;
+
+/**
+ * Stands in for atlas-lab (P2): marks a gate passed with a verified runner result, written straight to the DB.
+ * Used only to reach states (week 2+, due cards) that P1 cannot produce from the browser by design.
+ */
+export function passGateFixture(gateId: string, ref: string) {
+  const u = userId();
+  sql(`INSERT INTO attempts (user_id, gate_id, source, status, passed, content_version) VALUES ('${u}', '${gateId}', 'runner', 'passed', 1, 'e2e')`);
+  const id = sql(`SELECT MAX(id) FROM attempts WHERE user_id='${u}' AND gate_id='${gateId}'`)[0];
+  sql(`INSERT INTO attempt_evidence (attempt_id, kind, passed, ref, verified, verify_method) VALUES (${id}, 'runner_result', 1, '${ref}', 1, 'e2e fixture standing in for atlas-lab')`);
+}
+export function resetLearning() {
+  const u = userId();
+  for (const t of ["card_reviews", "cards", "remediation_plans", "time_logs", "diagnostic_sessions"]) sql(`DELETE FROM ${t} WHERE user_id='${u}'`);
+  sql(`DELETE FROM attempts WHERE user_id='${u}'`);
+}

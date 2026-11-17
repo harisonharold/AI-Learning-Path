@@ -26,6 +26,8 @@ services:
       APP_HOST: ${APP_HOST:?}
       SANDBOX_HOST: ${SANDBOX_HOST:?}
       APP_ORIGIN: https://${APP_HOST}
+      # Host header web sees for the sandbox; must equal the host of web's SANDBOX_ORIGIN.
+      SANDBOX_UPSTREAM_HOST: ${SANDBOX_HOST:?}
     volumes:
       - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

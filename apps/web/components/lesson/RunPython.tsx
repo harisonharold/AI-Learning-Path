@@ -10,7 +10,7 @@ export function RunPython({ code, sandboxOrigin }: { code: string; sandboxOrigin
   const [out, setOut] = useState<SandboxResult | null>(null);
   return (
     <div className="my-6 rounded border border-[var(--border)]">
-      <pre className="num overflow-x-auto bg-[var(--surface-2)] p-3 text-sm"><code>{code}</code></pre>
+      <pre tabIndex={0} aria-label="Snippet source" className="num overflow-x-auto bg-[var(--surface-2)] p-3 text-sm"><code>{code}</code></pre>
       <div className="flex items-center gap-3 p-2">
         <button type="button" className="btn" disabled={!sb.ready || busy} onClick={async () => { setBusy(true); setOut(await sb.run(code)); setBusy(false); }}>
           {busy ? "Running…" : sb.ready ? "Run in sandbox" : "Loading Python…"}
@@ -18,7 +18,7 @@ export function RunPython({ code, sandboxOrigin }: { code: string; sandboxOrigin
         <span className="text-xs text-[var(--ink-muted)]">Runs on a separate origin with no access to your account.</span>
       </div>
       {out && (
-        <pre role="status" className="num max-h-64 overflow-auto border-t border-[var(--border)] p-3 text-sm whitespace-pre-wrap">{out.stdout}{out.stderr ? `\n${out.stderr}` : ""}</pre>
+        <pre role="status" tabIndex={0} className="num max-h-64 overflow-auto border-t border-[var(--border)] p-3 text-sm whitespace-pre-wrap">{out.stdout}{out.stderr ? `\n${out.stderr}` : ""}</pre>
       )}
       <SandboxFrame frameRef={sb.frameRef} />
     </div>

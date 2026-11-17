@@ -30,6 +30,8 @@ export async function LessonBody({ source, sandboxOrigin }: { source: string; sa
       components={{
         RunPython: (p: { code: string }) => <RunPython code={p.code} sandboxOrigin={sandboxOrigin} />,
         Mermaid,
+        // Scrollable code blocks must be reachable by keyboard (axe: scrollable-region-focusable).
+        pre: (p: React.ComponentProps<"pre">) => <pre {...p} tabIndex={0} />,
         h2: (p: { children?: React.ReactNode }) => <h2 id={slugify(String(Array.isArray(p.children) ? p.children.join("") : p.children ?? ""))} className="mt-10 mb-3 scroll-mt-20 text-2xl">{p.children}</h2>,
       }}
     />

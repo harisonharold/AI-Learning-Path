@@ -11,7 +11,11 @@ export function Mermaid({ chart }: { chart: string }) {
     import("mermaid")
       .then(async ({ default: m }) => {
         const dark = document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
-        m.initialize({ startOnLoad: false, securityLevel: "strict", theme: dark ? "dark" : "neutral" });
+        // Explicit colours from our tokens: Mermaid's own dark theme fails WCAG contrast on edge labels.
+        const v = dark
+          ? { darkMode: true, background: "#1c1f23", primaryColor: "#262a2f", primaryTextColor: "#e8e6df", primaryBorderColor: "#6f747b", lineColor: "#a9a69c", textColor: "#e8e6df", edgeLabelBackground: "#262a2f", tertiaryColor: "#1c1f23" }
+          : { background: "#fffdf7", primaryColor: "#ede8dc", primaryTextColor: "#1b1a17", primaryBorderColor: "#7d7869", lineColor: "#55524a", textColor: "#1b1a17", edgeLabelBackground: "#ede8dc", tertiaryColor: "#fffdf7" };
+        m.initialize({ startOnLoad: false, securityLevel: "strict", theme: "base", themeVariables: v });
         const r = await m.render(`m${id}`, chart);
         if (alive) setSvg(r.svg);
       })

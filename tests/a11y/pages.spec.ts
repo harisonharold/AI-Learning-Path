@@ -3,7 +3,8 @@ import { expect, test } from "@playwright/test";
 import { signIn } from "../support/stack.ts";
 
 /** AT-13 starts in P1; P0 runs it on every page that exists, in both themes. */
-const PAGES = ["/today", "/roadmap", "/learn", "/lab", "/research", "/open-source", "/mentor", "/interview", "/portfolio", "/analytics", "/settings"];
+const PAGES = ["/today", "/roadmap", "/learn", "/learn/w01-tooling", "/learn/w03-caches", "/gates/g-w01", "/gates/g-w02", "/lab", "/lab/exercises/ex-w01-log-levels",
+  "/workspace", "/diagnostic", "/diagnostic/result", "/research", "/open-source", "/mentor", "/interview", "/portfolio", "/analytics", "/settings"];
 
 for (const theme of ["light", "dark"] as const) {
   test.describe(`${theme} theme`, () => {

@@ -23,7 +23,7 @@ export function CodeEditor({ initial, onChange, label }: { initial: string; onCh
       req(["vs/editor/editor.main"], (monaco) => {
         if (cancelled || !host.current) return;
         const dark = document.documentElement.getAttribute("data-theme") === "dark" || (!document.documentElement.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
-        editor = monaco.editor.create(host.current, { value, language: "python", theme: dark ? "vs-dark" : "vs", minimap: { enabled: false }, fontSize: 14, automaticLayout: true, ariaLabel: label, tabFocusMode: false, scrollBeyondLastLine: false });
+        editor = monaco.editor.create(host.current, { value, language: "python", theme: dark ? "hc-black" : "vs" /* vs-dark fails WCAG contrast for some tokens */, minimap: { enabled: false }, fontSize: 14, automaticLayout: true, ariaLabel: label, tabFocusMode: false, scrollBeyondLastLine: false });
         editor.onDidChangeModelContent(() => { const v = editor!.getValue(); setValue(v); onChange(v); });
         setEnhanced(true);
       }, () => {});
