@@ -171,7 +171,7 @@ test("diagnostic: pause, I don't know, autosave and result with recommendation",
   await page.getByRole("button", { name: "30 h/week" }).click();
   await page.getByRole("button", { name: "The keys, sorted" }).click();
   await page.getByRole("button", { name: "Pause" }).click();
-  await expect(page.getByText("Paused.")).toBeVisible();
+  await expect(page.getByText("Paused. Your answers are saved; come back any time.")).toBeVisible();
   await page.reload(); // resume after reload: answers were autosaved
   await expect(page.getByText(/Task 2 of 14/)).toBeVisible();
   for (let i = 2; i <= 14; i++) await page.getByRole("button", { name: "I don't know" }).click();

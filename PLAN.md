@@ -1,6 +1,6 @@
 # PLAN.md — Systems Atlas
 
-Status: **Revision 2 — plan approved 2026-11-16 with answers to Q2–Q7, Q9, Q13, Q14, Q16, plus six required security fixes (§11).** P0 has **not** started and will not start until Harison says "go". No application code, installs or scaffolding exist.
+Status: **P0 done (PR #1, awaiting review). P1 done on branch `p1-learning-core` (2026-11-17), awaiting review.** P2 has not started. Progress and test results: `PROGRESS.md`.
 
 Authoritative spec: `docs/spec/G_claude_code_prompt.md` (wins on conflict). Supporting: `docs/spec/{A..F,H}_*.md`, `docs/spec/SOURCES.md`. This plan references those files by section instead of restating them.
 
@@ -57,7 +57,7 @@ Modular monolith, as G §1 / D.1. Seven containers in dev; seven in production (
 Network zones (Compose networks): `edge` (caddy↔web), `internal` (web, workers, api-py, redis, mysql — no published ports in prod; subnet pinned to `172.28.0.0/16` so the SSRF blocklist can name it explicitly). `api-py`, `redis`, `mysql`, `jaeger` never publish ports in the production overlay. `/api/internal/*` is blocked at Caddy (THREAT_MODEL T-W5).
 
 **Two origins (D-14).** The app runs on `APP_ORIGIN`; Pyodide exercises run only on `SANDBOX_ORIGIN`, a different host:
-- Production: Caddy serves `SANDBOX_ORIGIN` (default `sandbox.<app-domain>`, Q21) from a static directory of self-hosted Pyodide assets + a fixed runner page. It never proxies to `web`, so `/api/*` does not exist there and no cookie can be set or received.
+- Production (revised in P1, D-46): Caddy serves `SANDBOX_ORIGIN` (`sandbox.<app-domain>`, Q21) by proxying **only `/sandbox/*`** to `web` (the self-hosted Pyodide files are built into the web image). It strips `Cookie`/`Authorization` on the way in and `Set-Cookie` on the way out, returns 404 for every other path, and web's own `proxy.ts` independently serves nothing but `/sandbox/*` on that host. So `/api/*` does not exist there and no cookie can be set or received.
 - Development: `APP_ORIGIN=http://localhost:3000`, `SANDBOX_ORIGIN=http://127.0.0.1:3000`. Different hosts ⇒ different origins; host-only cookies set on `localhost` are never sent to `127.0.0.1`. Next.js proxy/middleware serves **only** `/sandbox/*` on the sandbox host (everything else 404, never `Set-Cookie`) and returns 404 for `/sandbox/*` on the app host.
 - Session cookies are host-only (no `Domain` attribute), so a sandbox subdomain never receives them. The iframe also carries `sandbox="allow-scripts allow-same-origin"` — `allow-same-origin` here grants the frame only *its own* (sandbox) origin, which Pyodide needs for its Web Worker and package cache; it never grants the app origin. App CSP: `frame-src SANDBOX_ORIGIN`. Sandbox CSP: `connect-src 'self'`, `frame-ancestors APP_ORIGIN`.
 - Results return via `postMessage(targetOrigin = APP_ORIGIN)`; the parent accepts only `event.origin === SANDBOX_ORIGIN` and Zod-validates the message. They are recorded as **practice checks**, which never count toward a gate (D-15).
@@ -332,6 +332,8 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 | ● Q21 | Production hostname for `SANDBOX_ORIGIN`: a subdomain (`sandbox.<app-domain>`) or a separate registrable domain? Both are cross-origin and receive no cookies (host-only cookies); a separate domain is also cross-*site*, which is stricter for future browser features but costs a second domain. | D-14 | Subdomain; no new cost. Needed before the first VM deploy, not before P0 |
 | ● Q22 | Your GitHub **numeric** user id for `ALLOWED_GITHUB_USER_ID` (a login can be renamed and re-registered by someone else, an id can't). I can read it from the public `GET https://api.github.com/users/<login>` if you confirm the login is `harisonharold`. | X-01 | Builder looks it up at P0 start after you confirm the login |
 | Q23 | Consequence of D-15 for the diagnostic: skipping W1–W3 needs counting evidence, so the code parts of a skip must run through atlas-lab (installed during the diagnostic), not only in the browser. OK? | Q5 + D-15 | Yes; browser-only diagnostic results still shape the skill map but never skip a week |
+| Q25 | Lessons for weeks 4-24: the curriculum, gates and rubrics are all in `content/`, but lesson text exists only for weeks 1-3 (Q12). Write the next lessons per phase as weeks become reachable, or batch them? | Q12 | Write each week's lesson before a learner can reach it; W4-W8 next |
+| Q26 | ts-fsrs 6 and newer tools want Node 24. Move the stack to Node 24 (images, CI, `engines`) during P2? | D-41 | Yes, in P2, as its own small PR |
 | Q24 | Refreshing a GitHub user-to-server token is also a `POST` to `https://github.com/login/oauth/access_token` (`grant_type=refresh_token`). I treat "the OAuth token exchange" as covering both code exchange and refresh at that one endpoint, both in `modules/auth`. OK? | AT-27 reworded | Yes |
 
 ---
@@ -365,6 +367,8 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 
 ### Decisions made during P0 (for review; each is reversible)
 
+(Status of D-38: **done** in P1. Every action in `.github/workflows/ci.yml` is pinned to a full commit SHA, and `apps/web/tests/unit/ci-pins.test.ts` fails on any unpinned `uses:`.)
+
 | ID | Decision | Why |
 |---|---|---|
 | D-23 | `ALLOWED_GITHUB_USER_ID=123658133`, read from the `owner.id` of `GET /repos/harisonharold/AI-Learning-Path` on 2026-11-16 (same id as first read from the earlier repo; `/users/{login}` is blocked from the build sandbox) | Q22 |
@@ -389,6 +393,24 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 - **D-31, D-32, D-34 approved.**
 - **D-38 (new):** pin every GitHub Action in `.github/workflows/` to a full commit SHA (with the version as a comment) before P1 ends. It is a P1 exit condition in TASKS.md.
 - **D-39 (new):** the project's home is `harisonharold/AI-Learning-Path`; work lands on branch `ccr-42198ca2-6rc626` and reaches `main` only when Harison approves. The mistaken pushes to `harisonharold/sloane` stay untouched until Harison decides (see §1).
+
+
+### Decisions made during P1 (for review)
+
+| ID | Decision | Why |
+|---|---|---|
+| D-40 | `yaml` (eemeli/yaml 2.9.1, ISC) parses `content/*.yaml`; every file is then validated with Zod and cross-checked (unknown skills, sources, gates, cycles) | Approved by Harison 2026-11-16 |
+| D-41 | **ts-fsrs 5.4.2**, not 6.0.0: 6.0 requires Node 24 and the stack runs Node 22. FSRS target retention 0.9, fuzz off (reproducible schedules) | engine constraint |
+| D-42 | OpenTelemetry: JS `@opentelemetry/sdk-node` 0.301.2 with `sdk-trace`/`core` 3.1.1 (the 3.x package names) and the OTLP/HTTP exporter; Python `opentelemetry-sdk`, OTLP/HTTP exporter and FastAPI instrumentation. Exported span attributes pass through the same redaction as logs. On in dev (Jaeger), off in production unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Job messages carry a W3C `traceparent` | G §1 observability; X-03 |
+| D-43 | `attempt_evidence` gains `passed`, `ref`, `quiz_id` (migration 0002) instead of encoding outcomes in `verify_method` | honest, queryable evidence |
+| D-44 | Content is seeded at web boot after migrations. Curriculum rows follow `content/`; source rows are inserted once and their verification fields are never overwritten by the seed (the verification job owns them) | single source of truth without clobbering checks |
+| D-45 | From the browser, a learner can submit only artifact links and quiz answers. Objective results (`runner_result`) come only from atlas-lab (P2), so in P1 no code-test gate can pass yet; the UI says so. The integration and e2e suites stand in for atlas-lab with clearly labelled DB fixtures | D-15 approved; Q23 |
+| D-46 | Production sandbox host proxies only `/sandbox/*` to web with cookies stripped both ways (replaces the static `file_server` in D-14), because the Pyodide assets are generated into the web image | keeps one source for the assets |
+| D-47 | Monaco (self-hosted, 25 MB in `public/monaco`, git-ignored, copied at build) is a progressive enhancement over a labelled textarea; dark mode uses Monaco's `hc-black` theme because `vs-dark` fails contrast | E.5, AT-13 |
+| D-48 | A small `research` module exists from P1 for source freshness (`fresh`/`stale` after 30 days/`unverified`/`broken`) | lessons need AT-12 before P3 |
+| D-49 | Hint reveals are counted on the learner's practice attempt for that exercise (max 3) | E.3 §6 "honest counter" |
+| D-50 | CI runs the Python checks on 3.12 (`uv sync --python 3.12`), matching the Docker images, instead of the runner's default | consistency |
+| D-51 | The diagnostic's code task asks the learner to report the practice-check outcome; it shapes the skill map only and can never skip a week | D-15, Q23 |
 
 ---
 

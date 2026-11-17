@@ -21,6 +21,8 @@ export function DiagnosticRunner({ items, resume }: { items: Item[]; resume: Res
   const pausedMs = useRef(resume?.pausedMs ?? 0);
   const pauseStart = useRef<number | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  // Saves run one after another so an older snapshot can never overwrite a newer one.
+  const saveChain = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     if (paused || hours === null) return;
@@ -29,8 +31,14 @@ export function DiagnosticRunner({ items, resume }: { items: Item[]; resume: Res
   }, [paused, hours]);
   useEffect(() => { heading.current?.focus(); }, [index]);
 
-  async function save(next: Record<string, Answer>, nextIndex: number, complete: boolean) {
+  function save(next: Record<string, Answer>, nextIndex: number, complete: boolean) {
     setSaveState("Saving…");
+    saveChain.current = saveChain.current.then(() => send(next, nextIndex, complete)).catch(() => {
+      setSaveState("Not saved: check your connection; your answers are still on this page.");
+    });
+    return saveChain.current;
+  }
+  async function send(next: Record<string, Answer>, nextIndex: number, complete: boolean) {
     const r = await fetch("/api/diagnostic/attempts", { method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ answers: next, index: nextIndex, pausedMs: pausedMs.current, complete, ...(hours ? { hoursPerWeek: hours } : {}) }) });
     setSaveState(r.ok ? "Saved" : "Not saved: check your connection; your answers are still on this page.");
@@ -78,7 +86,7 @@ export function DiagnosticRunner({ items, resume }: { items: Item[]; resume: Res
         <span className="num" aria-label="Elapsed time">{Math.floor(elapsed / 60)} min {elapsed % 60} s{paused ? " (paused)" : ""}</span>
         <button type="button" className="btn" onClick={togglePause}>{paused ? "Resume" : "Pause"}</button>
       </div>
-      {paused ? <p>Paused. Your answers are saved; come back any time.</p> : (
+      {paused ? <p>Paused. {saveState === "Saved" ? "Your answers are saved; come back any time." : saveState}</p> : (
         <>
           <h2 id="task-h" tabIndex={-1} ref={heading} className="text-lg">{item.prompt}</h2>
           {item.kind === "mcq" && (
