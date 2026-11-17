@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM node:22-alpine
+FROM node:24-alpine
 WORKDIR /repo
 ARG HTTPS_PROXY
 ARG NO_PROXY
