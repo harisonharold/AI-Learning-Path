@@ -28,7 +28,7 @@
 - **OpenTelemetry (D-42):** web, api-py and worker-py export to Jaeger in dev, with redacting exporters. A job is one trace across web, worker-py and the signed callback.
 - **Fonts:** self-hosted Inter, Source Serif 4 and JetBrains Mono; all SIL OFL 1.1, checked against each package's LICENSE.
 
-### Tested (local, 2026-11-17; CI on the branch: see below)
+### Tested (local, 2026-11-17, and on GitHub CI)
 | Suite | Result |
 |---|---|
 | Lint (boundaries included) / strict typecheck | clean |
@@ -40,6 +40,8 @@
 | AT-01 compose smoke | pass |
 | AT-03 + X-06 bundle scan | 0 findings in `.next/static` (119 files) and the sandbox files, 9 canaries incl. answer keys and solution |
 | X-02 Caddy edge | 9/9 checks |
+
+**GitHub CI:** run [44027085773](https://github.com/harisonharold/AI-Learning-Path/actions/runs/44027085773) on `1fa56de` passed all four jobs, with every action pinned to a commit SHA. The run before it, 44025714721, failed one browser test; see below.
 
 Acceptance tests covered in P1:
 - **AT-06:** unit test, including a compile-time check that the lock function has no time input, plus an integration test logging 100 hours.
