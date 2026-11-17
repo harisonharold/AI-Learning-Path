@@ -1,12 +1,18 @@
-import { githubLoginConfigured } from "@/modules/auth/service";
-import { AccountDelete, JobsPanel } from "./client";
+import { githubLoginConfigured, pageUser } from "@/modules/auth/service";
+import { settings } from "@/modules/learning/service";
+import { AccountDelete, JobsPanel, PlanForm } from "./client";
 
 export const metadata = { title: "Settings" };
 
-export default function Page() {
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+  const u = await pageUser();
+  const s = await settings(u.id);
   return (
     <div className="prose-width space-y-8">
       <h1 className="text-3xl">Settings &amp; integrations</h1>
+      <PlanForm mode={s.mode} hoursPerWeek={s.hoursPerWeek} timezone={s.timezone} />
       <section className="panel space-y-2" aria-labelledby="int-title">
         <h2 id="int-title" className="text-xl">Integrations</h2>
         <ul className="space-y-1">

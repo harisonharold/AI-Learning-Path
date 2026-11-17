@@ -262,7 +262,8 @@ export async function saveDiagnostic(userId: string, input: { answers: Record<st
 function diagnosticResultFrom(state: DiagState) {
   const c = getContent();
   const s = scoreDiagnostic(c.diagnostic.items, state.answers);
-  const rec = recommend(c.curriculum, s.overall, state.hoursPerWeek ?? DEFAULTS.hoursPerWeek);
+  const hours = state.hoursPerWeek ?? DEFAULTS.hoursPerWeek;
+  const rec = { ...recommend(c.curriculum, s.overall, hours), hoursPerWeek: hours };
   return { levels: s.levels, perSkill: s.perSkill, overall: s.overall, recommendation: rec };
 }
 

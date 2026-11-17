@@ -18,7 +18,6 @@ services:
       APP_ORIGIN: https://${APP_HOST}
     volumes:
       - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../../apps/web/public/sandbox:/srv/sandbox:ro
       - caddy-data:/data
     networks: [edge]
     depends_on: [web]

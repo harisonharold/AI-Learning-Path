@@ -8,6 +8,7 @@
   --font-mono: var(--font-mono);
 }
 
+:root { --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif; --font-serif: var(--font-source-serif), Georgia, serif; --font-mono: var(--font-jetbrains), ui-monospace, monospace; }
 html { background: var(--bg); color: var(--ink); font-family: var(--font-sans); }
 body { min-height: 100vh; background: var(--bg); }
 h1, h2, h3 { font-family: var(--font-serif); }
@@ -30,3 +31,17 @@ a { color: var(--accent); text-underline-offset: 2px; }
 .skip-link { position: absolute; left: -9999px; top: .5rem; z-index: 100; }
 .skip-link:focus { left: .5rem; background: var(--surface); padding: .5rem 1rem; }
 kbd { border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 .35rem; font-size: .8em; }
+
+/* Lessons */
+.lesson p, .lesson ul, .lesson ol { margin: .75rem 0; }
+.lesson ul { list-style: disc; padding-left: 1.5rem; }
+.lesson ol { list-style: decimal; padding-left: 1.5rem; }
+.lesson code { font-family: var(--font-mono); font-size: .9em; }
+.lesson :not(pre) > code { background: var(--surface-2); padding: 0 .25rem; border-radius: 3px; }
+.lesson pre { overflow-x: auto; padding: .75rem; border-radius: var(--radius); border: 1px solid var(--border); margin: 1rem 0; }
+/* Shiki dual themes (defaultColor: false) */
+.shiki, .shiki span { color: var(--shiki-light); background-color: var(--shiki-light-bg); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .shiki, :root:not([data-theme="light"]) .shiki span { color: var(--shiki-dark); background-color: var(--shiki-dark-bg); } }
+:root[data-theme="dark"] .shiki, :root[data-theme="dark"] .shiki span { color: var(--shiki-dark); background-color: var(--shiki-dark-bg); }
+/* React Flow nodes must show the focus ring */
+.react-flow__node:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }

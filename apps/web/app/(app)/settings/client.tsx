@@ -85,3 +85,30 @@ export function AccountDelete() {
     </section>
   );
 }
+
+export function PlanForm(p: { mode: "RI" | "ACC"; hoursPerWeek: number; timezone: string }) {
+  const [mode, setMode] = useState(p.mode);
+  const [hours, setHours] = useState(p.hoursPerWeek);
+  const [tz, setTz] = useState(p.timezone);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  return (
+    <form className="panel space-y-3" aria-labelledby="plan-title" onSubmit={async (e) => {
+      e.preventDefault();
+      const r = await fetch("/api/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ mode, hoursPerWeek: hours, timezone: tz }) });
+      setMsg(r.ok ? { ok: true, text: "Saved." } : { ok: false, text: "Not saved: check the values." });
+    }}>
+      <h2 id="plan-title" className="text-xl">Plan</h2>
+      <fieldset><legend>Mode</legend>
+        <label className="mr-4"><input type="radio" name="mode" checked={mode === "RI"} onChange={() => setMode("RI")} /> Research-Intensive (24 weeks at 40 h)</label>
+        <label><input type="radio" name="mode" checked={mode === "ACC"} onChange={() => setMode("ACC")} /> Accelerated (16 weeks at 50 h)</label>
+      </fieldset>
+      <label htmlFor="hours" className="block">Hours per week</label>
+      <select id="hours" className="rounded border border-[var(--border)] bg-[var(--surface)] p-2" value={hours} onChange={(e) => setHours(Number(e.target.value))}>{[20, 30, 40, 50].map((h) => <option key={h} value={h}>{h}</option>)}</select>
+      <label htmlFor="tz" className="block">Time zone</label>
+      <input id="tz" className="rounded border border-[var(--border)] bg-[var(--surface)] p-2" value={tz} onChange={(e) => setTz(e.target.value)} />
+      <p className="text-sm text-[var(--ink-muted)]">Hours change the calendar only; gates stay the same.</p>
+      <button className="btn" type="submit">Save plan</button>
+      {msg && <p role={msg.ok ? "status" : "alert"} className={msg.ok ? "" : "text-[var(--danger)]"}>{msg.text}</p>}
+    </form>
+  );
+}
