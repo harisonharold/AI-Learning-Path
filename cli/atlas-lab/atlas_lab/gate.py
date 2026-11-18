@@ -133,9 +133,12 @@ def run_gate(bundle: dict[str, Any], solution: Path, env: dict[str, Any], docker
     if not solution.is_file():
         raise GateError(f"solution file not found: {solution}")
     m = bundle["manifest"]
-    pull = subprocess.run([docker, "pull", "-q", m["image"]], capture_output=True, text=True, check=False)  # noqa: S603
-    if pull.returncode != 0:
-        raise GateError(f"docker pull failed: {pull.stderr.strip()[-500:]}")
+    # The image is pinned by digest, so a local copy is exactly the right image; pull only when it is missing.
+    have = subprocess.run([docker, "image", "inspect", m["image"]], capture_output=True, check=False)  # noqa: S603
+    if have.returncode != 0:
+        pull = subprocess.run([docker, "pull", "-q", m["image"]], capture_output=True, text=True, check=False)  # noqa: S603
+        if pull.returncode != 0:
+            raise GateError(f"docker pull failed: {pull.stderr.strip()[-500:]}")
     with tempfile.TemporaryDirectory(prefix="atlas-lab-gate-") as tmp:
         prep = prepare(bundle, solution, Path(tmp))
         argv = [docker, *prep.argv[1:]]

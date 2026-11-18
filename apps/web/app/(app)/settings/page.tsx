@@ -1,6 +1,6 @@
 import { githubLoginConfigured, pageUser } from "@/modules/auth/service";
 import { settings } from "@/modules/learning/service";
-import { AccountDelete, JobsPanel, PlanForm } from "./client";
+import { AccountDelete, JobsPanel, PlanForm, RunnerTokens, SampleDataToggle } from "./client";
 
 export const metadata = { title: "Settings" };
 
@@ -21,6 +21,8 @@ export default async function Page() {
           <li>AI mentor: not configured (phase P5). Everything else works without it.</li>
         </ul>
       </section>
+      <RunnerTokens />
+      <SampleDataToggle on={s.sampleData} />
       <JobsPanel />
       <AccountDelete />
     </div>

@@ -13,13 +13,18 @@ import html
 import re
 from typing import Any
 
-_MD_SPECIAL = re.compile(r"([\\`*_{}\[\]()#+\-.!|<>~])")
+_MD_INLINE = re.compile(r"([\\`*_\[\]<>|~&])")
+_MD_LINE_START = re.compile(r"^(\s*)([#+\-=>])")
+_MD_ORDERED = re.compile(r"^(\s*\d+)([.)])")
 
 
 def md(text: Any) -> str:
-    """Escape text for inline Markdown (also neutralises raw HTML and line-start syntax)."""
+    """Escape text for Markdown: inline syntax everywhere (emphasis, code, links, raw HTML, tables, entities) and block
+    syntax only where it can start a block. Plain punctuation stays readable in the raw file."""
     s = str(text).replace("\r", " ").replace("\n", " ")
-    return _MD_SPECIAL.sub(r"\\\1", s)
+    s = _MD_INLINE.sub(r"\\\1", s)
+    s = _MD_LINE_START.sub(r"\1\\\2", s)
+    return _MD_ORDERED.sub(r"\1\\\2", s)
 
 
 def h(text: Any) -> str:

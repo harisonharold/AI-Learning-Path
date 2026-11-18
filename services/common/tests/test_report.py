@@ -1,5 +1,6 @@
 """Report rendering: escaping, the F.5 claim rule, and failed runs always listed (AT-19 report part)."""
 
+import re
 from typing import Any
 
 import numpy as np
@@ -85,7 +86,8 @@ def test_user_text_is_escaped_in_html_and_markdown() -> None:
     out = report.build(payload())
     html_doc, md_doc = out["html"], out["markdown"]
     assert "<script>" not in html_doc and "<img" not in html_doc and "&lt;script&gt;" in html_doc
-    assert "<script>" not in md_doc and "](javascript:" not in md_doc
+    assert "<script>" not in md_doc
+    assert not re.search(r"(?<!\\)\]\(javascript:", md_doc)  # no live link syntax
     # Raw "<" survives only inside the indented code block (literal text there), on a single line.
     assert all(line.startswith("    ") for line in md_doc.splitlines() if "<img" in line)
     assert "    atlas-lab run bench.py <img src=x onerror=alert(1)>" in md_doc

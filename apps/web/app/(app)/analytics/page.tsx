@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LearningMeter } from "@/components/Meter";
 import { StateBadge } from "@/components/StateBadge";
 import { pageUser } from "@/modules/auth/service";
@@ -14,7 +15,7 @@ export default async function Page() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl">Progress analytics</h1>
-      <p className="prose-width text-[var(--ink-muted)]">Benchmark analytics (CDFs, percentiles with CIs, GPU timelines) arrive with the lab in phase P2.</p>
+      <p className="prose-width text-[var(--ink-muted)]">Benchmark results live in <Link href="/analytics/benchmarks">benchmark analytics</Link> (CDFs, percentiles with bootstrap CIs, GPU timelines).</p>
       <LearningMeter m={m.learning} />
       <section className="panel" aria-labelledby="gates-title">
         <h2 id="gates-title" className="text-xl">Gate history</h2>

@@ -25,6 +25,9 @@ nav a, .react-flow a { text-decoration: none; }
 .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn-primary:hover { background: var(--accent); filter: brightness(1.08); }
 .btn-danger { color: var(--danger); border-color: var(--danger); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
+.input { border: 1px solid var(--border); background: var(--surface); color: var(--ink); border-radius: var(--radius); padding: .375rem .5rem; min-height: 2.25rem; }
+textarea.input { width: 100%; font-family: var(--font-mono); font-size: .875rem; }
 .skeleton { background: var(--surface-2); border-radius: var(--radius); animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .55; } }
 .mock-banner { background: repeating-linear-gradient(135deg, var(--mock-bg) 0 12px, transparent 12px 24px), var(--mock-bg);

@@ -112,3 +112,99 @@ export function PlanForm(p: { mode: "RI" | "ACC"; hoursPerWeek: number; timezone
     </form>
   );
 }
+
+type Tok = { id: number; tokenPrefix: string; scopes: string[]; expiresAt: string; revoked: boolean; lastUsedAt: string | null; createdAt: string };
+
+/** atlas-lab runner tokens (AT-18): the plaintext is shown once, right after creation, and never again. */
+export function RunnerTokens() {
+  const [items, setItems] = useState<Tok[] | null>(null);
+  const [fresh, setFresh] = useState<string | null>(null);
+  const [days, setDays] = useState(30);
+  const [scopes, setScopes] = useState({ write: true, read: true });
+  const [err, setErr] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    const r = await fetch("/api/runner/tokens", { cache: "no-store" });
+    if (r.ok) setItems((await r.json()).tokens); else setErr(`Tokens failed to load (HTTP ${r.status}).`);
+  }, []);
+  useEffect(() => { const t = setTimeout(load, 0); return () => clearTimeout(t); }, [load]);
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    const s = [...(scopes.write ? ["results:write"] : []), ...(scopes.read ? ["tests:read"] : [])];
+    if (!s.length) { setErr("Pick at least one scope."); return; }
+    const r = await fetch("/api/runner/tokens", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ scopes: s, days }) });
+    if (!r.ok) { setErr(`Could not create the token (HTTP ${r.status}).`); return; }
+    setFresh((await r.json()).token);
+    setErr(null);
+    void load();
+  }
+  async function revoke(id: number) {
+    const r = await fetch(`/api/runner/tokens/${id}`, { method: "DELETE" });
+    if (!r.ok) setErr(`Could not revoke (HTTP ${r.status}).`);
+    void load();
+  }
+  return (
+    <section className="panel space-y-3" aria-labelledby="tok-title">
+      <h2 id="tok-title" className="text-xl">atlas-lab runner tokens</h2>
+      <p className="text-sm text-[var(--ink-muted)]">atlas-lab uses a token to upload results (results:write) and fetch hidden gate tests (tests:read). Only a SHA-256 hash is stored; tokens expire within 90 days and can be revoked here.</p>
+      <form className="flex flex-wrap items-end gap-3" onSubmit={create}>
+        <fieldset className="text-sm"><legend>Scopes</legend>
+          <label className="mr-3"><input type="checkbox" checked={scopes.write} onChange={(e) => setScopes({ ...scopes, write: e.target.checked })} /> results:write</label>
+          <label><input type="checkbox" checked={scopes.read} onChange={(e) => setScopes({ ...scopes, read: e.target.checked })} /> tests:read</label>
+        </fieldset>
+        <label className="text-sm">Expires in (days)<input type="number" min={1} max={90} className="input ml-2 w-20" value={days} onChange={(e) => setDays(Number(e.target.value))} /></label>
+        <button type="submit" className="btn btn-primary">Create token</button>
+      </form>
+      {fresh && (
+        <div role="status" className="space-y-1 rounded border border-[var(--accent)] p-3 text-sm" data-new-token>
+          <p><strong>Copy this token now; it will not be shown again.</strong> Then run <code>atlas-lab login --token</code> and paste it at the hidden prompt.</p>
+          <code className="block break-all">{fresh}</code>
+          <button type="button" className="btn" onClick={() => void navigator.clipboard?.writeText(fresh)}>Copy</button>
+          <button type="button" className="btn ml-2" onClick={() => setFresh(null)}>I saved it</button>
+        </div>
+      )}
+      {err && <p role="alert" className="text-[var(--danger)]">{err}</p>}
+      {items?.length === 0 && <p className="text-sm">No tokens yet.</p>}
+      {items && items.length > 0 && (
+        <table className="w-full text-sm">
+          <caption className="sr-only">Runner tokens</caption>
+          <thead><tr className="text-left"><th scope="col">Token</th><th scope="col">Scopes</th><th scope="col">Expires</th><th scope="col">Last used</th><th scope="col">State</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+          <tbody>{items.map((t) => {
+            const expired = new Date(t.expiresAt) <= new Date();
+            return (
+              <tr key={t.id} className="border-t border-[var(--border)]" data-token-id={t.id}>
+                <td className="num">{t.tokenPrefix}…</td><td>{t.scopes.join(", ")}</td><td className="num">{new Date(t.expiresAt).toLocaleDateString()}</td>
+                <td className="num">{t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleString() : "never"}</td>
+                <td>{t.revoked ? "revoked" : expired ? "expired" : "active"}</td>
+                <td>{!t.revoked && !expired && <button type="button" className="btn btn-danger" onClick={() => void revoke(t.id)} aria-label={`Revoke token ${t.tokenPrefix}`}>Revoke</button>}</td>
+              </tr>
+            );
+          })}</tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
+/** FR-30 / Q17: sample lab data, off by default. Turning it off deletes the sample project. */
+export function SampleDataToggle({ on }: { on: boolean }) {
+  const [value, setValue] = useState(on);
+  const [state, setState] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function toggle(next: boolean) {
+    setValue(next); // reflect the choice now; revert if the server refuses
+    setBusy(true);
+    setState("Saving…");
+    const r = await fetch("/api/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ sampleData: next }) });
+    setBusy(false);
+    if (r.ok) setState(next ? "Sample project created. It is labelled SAMPLE DATA everywhere." : "Sample data removed.");
+    else { setValue(!next); setState(`Could not save (HTTP ${r.status}).`); }
+  }
+  return (
+    <section className="panel space-y-2" aria-labelledby="sample-title">
+      <h2 id="sample-title" className="text-xl">Sample data</h2>
+      <p className="text-sm text-[var(--ink-muted)]">Adds one demo lab project with seeded runs so you can explore analytics before measuring anything. Sample records are labelled SAMPLE DATA and never count in meters, the portfolio or reports.</p>
+      <label className="text-sm"><input type="checkbox" checked={value} disabled={busy} onChange={(e) => void toggle(e.target.checked)} /> Show sample lab data</label>
+      {state && <p role="status" className="text-sm">{state}</p>}
+    </section>
+  );
+}

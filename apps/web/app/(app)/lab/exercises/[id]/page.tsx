@@ -28,7 +28,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <h2 id="count-title" className="text-lg">Making it count</h2>
         <p className="mt-1">Browser results are practice checks: the tests are visible and nothing here counts toward the gate. The counting run uses hidden tests in Docker on your machine:</p>
         <pre className="num mt-2 rounded bg-[var(--surface-2)] p-2">atlas-lab run {e.id}</pre>
-        <p className="mt-1 text-[var(--ink-muted)]">atlas-lab arrives in phase P2.</p>
+        <p className="mt-1 text-[var(--ink-muted)]">Set it up once: create a runner token in <Link href="/settings">Settings</Link>, install atlas-lab (<code>uv tool install ./cli/atlas-lab</code> from the repository) and run <code>atlas-lab login --token</code>. Docker is required; your code runs with no network.</p>
       </section>
       {e.practiceRuntime === "pyodide"
         ? <ExerciseWorkbench id={e.id} starter={e.starter} tests={e.practiceTests} sandboxOrigin={getEnv().SANDBOX_ORIGIN} hintsUsed={e.hintsUsed} hints={e.hints} gatePassed={e.gateStatus === "passed"} />

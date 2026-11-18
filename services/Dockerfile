@@ -11,7 +11,9 @@ COPY pyproject.toml uv.lock ./
 COPY services/common services/common
 COPY services/api-py services/api-py
 COPY services/worker-py services/worker-py
+# The atlas-lab CLI is a workspace member but is not installed in the service image; uv only needs its manifest.
+COPY cli/atlas-lab/pyproject.toml cli/atlas-lab/pyproject.toml
 RUN --mount=type=secret,id=extra_ca sh -c \
-  'if [ -s /run/secrets/extra_ca ]; then export PIP_CERT=/run/secrets/extra_ca SSL_CERT_FILE=/run/secrets/extra_ca; fi; uv sync --frozen --all-packages --no-dev'
+  'if [ -s /run/secrets/extra_ca ]; then export PIP_CERT=/run/secrets/extra_ca SSL_CERT_FILE=/run/secrets/extra_ca; fi; uv sync --frozen --no-dev --package api-py --package worker-py'
 RUN useradd --system --no-create-home atlas
 USER atlas

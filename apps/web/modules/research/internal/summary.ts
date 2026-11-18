@@ -3,7 +3,7 @@
  * "linear" percentile method exactly; a test checks it against the committed numpy fixture. Bootstrap CIs, the
  * histogram and the CDF are added afterwards by the stats job (worker-py).
  */
-export interface CoreSummary { n: number; mean: number; stdev: number; min: number; max: number; p50: number; p95: number; p99: number }
+export interface CoreSummary { n: number; mean: number; stdev: number; min: number; max: number; p25: number; p50: number; p75: number; p95: number; p99: number }
 
 export function percentileSorted(sorted: ArrayLike<number>, p: number): number {
   const n = sorted.length;
@@ -30,7 +30,7 @@ export function describe(values: readonly number[]): CoreSummary {
   for (const v of sorted) ss += (v - mean) ** 2;
   return {
     n, mean, stdev: n > 1 ? Math.sqrt(ss / (n - 1)) : 0, min: sorted[0]!, max: sorted[n - 1]!,
-    p50: percentileSorted(sorted, 50), p95: percentileSorted(sorted, 95), p99: percentileSorted(sorted, 99),
+    p25: percentileSorted(sorted, 25), p50: percentileSorted(sorted, 50), p75: percentileSorted(sorted, 75), p95: percentileSorted(sorted, 95), p99: percentileSorted(sorted, 99),
   };
 }
 
