@@ -11,7 +11,7 @@ export async function getSettings(userId: string) {
   return { mode: row?.mode ?? null, hoursPerWeek: row?.hoursPerWeek ?? null, timezone: row?.timezone ?? "America/Toronto", sampleData: row?.sampleData ?? false };
 }
 
-export async function putSettings(userId: string, s: { mode?: "RI" | "ACC"; hoursPerWeek?: number; timezone?: string }) {
+export async function putSettings(userId: string, s: { mode?: "RI" | "ACC"; hoursPerWeek?: number; timezone?: string; sampleData?: boolean }) {
   await getDb().insert(userSettings).values({ userId, ...s }).onDuplicateKeyUpdate({ set: s });
 }
 
@@ -52,7 +52,7 @@ export async function openRemediationGates(userId: string) {
 }
 
 /** Returns the open attempt for a gate, creating one. Refuses while a remediation wait is running (B.6). */
-export async function openAttempt(userId: string, gateId: string, contentVersion: string, source: "manual" | "server" | "diagnostic" = "manual") {
+export async function openAttempt(userId: string, gateId: string, contentVersion: string, source: "manual" | "server" | "diagnostic" | "runner" = "manual") {
   const db = getDb();
   const wait = (await openRemediationGates(userId)).find((r) => r.gateId === gateId && r.reattemptAfter && r.reattemptAfter > new Date());
   if (wait) return { error: "REATTEMPT_WAIT" as const, until: wait.reattemptAfter! };

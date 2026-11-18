@@ -28,7 +28,7 @@ RUN pnpm --filter @atlas/web build
 FROM node:24-alpine AS run
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 MIGRATIONS_DIR=/app/migrations CONTENT_DIR=/app/content
-RUN addgroup -S atlas && adduser -S atlas -G atlas
+RUN addgroup -S atlas && adduser -S atlas -G atlas && mkdir -p /data/raw && chown atlas:atlas /data/raw
 COPY --from=build --chown=atlas:atlas /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=atlas:atlas /repo/apps/web/.next/static ./apps/web/.next/static
 # Standalone output does not include public/; copy it (sandbox runner page lives there).

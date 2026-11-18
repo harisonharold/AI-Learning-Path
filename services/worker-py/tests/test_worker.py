@@ -57,3 +57,20 @@ def test_callback_body_matches_contract() -> None:
     with httpx.Client(transport=httpx.MockTransport(handler)) as c:
         post_result(c, "http://web:3000", KEY, JOB, {"status": "failed", "error": "boom", "attempts": 5})
     assert not list(Draft202012Validator(schema).iter_errors(json.loads(captured[0])))
+
+
+def test_stats_summarize_job() -> None:
+    from worker_py.handlers import handle
+
+    out = handle(
+        "stats.summarize", {"run_id": 7, "metrics": [{"name": "lat", "values": [1, 2, 3, 4]}], "resamples": 100}
+    )
+    assert out["run_id"] == 7 and out["metrics"]["lat"]["p50"] == 2.5 and out["metrics"]["lat"]["basis_n"] == 4
+
+
+def test_bad_input_fails_without_retry_semantics() -> None:
+    import pytest
+    from worker_py.handlers import BadJobInput, handle
+
+    with pytest.raises(BadJobInput):
+        handle("stats.summarize", {"metrics": [{"name": "lat", "values": [float("nan")]}]})

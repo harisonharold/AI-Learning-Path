@@ -1,4 +1,4 @@
-# Lessons (P1 ships RI weeks 1-3; later weeks list objectives and resources only, PLAN Q12).
+# Lessons. RI weeks 1-8 have full lessons; later weeks list objectives and resources only (Q12, Q25: lessons stay at least one week ahead of the learner).
 # Cards are the week's "must-know" list (B.4: 15-30 per week); the learner adds them to their deck from the lesson.
 - slug: w01-tooling
   week: RI-W01
@@ -66,3 +66,113 @@
     - { front: "Caveat with `perf stat -e cache-misses`?", back: "It is a hardware counter whose exact meaning depends on the CPU model." }
     - { front: "What does SIMD mean?", back: "One instruction operates on several data lanes at once." }
     - { front: "Order the memory hierarchy from fastest to slowest.", back: "Registers, L1, L2, L3, main memory (DRAM)." }
+- slug: w04-os
+  week: RI-W04
+  title: "Processes, virtual memory and scheduling"
+  body: lessons/w04-os.mdx
+  resources: [ostep, mit-6-1810, repo-xv6-riscv]
+  exercises: []
+  cards:
+    - { front: "What does fork() return?", back: "The child's PID in the parent, 0 in the child, and -1 on error." }
+    - { front: "What does exec() keep and what does it replace?", back: "It replaces the process image (code, data, stack) and keeps the PID and open file descriptors (except close-on-exec ones)." }
+    - { front: "Why does a shell fork before exec?", back: "So the shell itself survives: the child becomes the new program while the parent waits for it." }
+    - { front: "What happens on a system call?", back: "A trap instruction (ecall on RISC-V) switches to supervisor mode and jumps to the kernel's trap handler, which runs the call and returns to user mode." }
+    - { front: "Offset bits in an address with 4 KiB pages?", back: "12 (2^12 = 4096)." }
+    - { front: "RISC-V Sv39: address width and page-table levels?", back: "39-bit virtual addresses, 3 levels, 9 index bits (512 entries) per level." }
+    - { front: "What does the TLB cache?", back: "Recent virtual-to-physical translations, so most accesses skip the page-table walk." }
+    - { front: "When does a page fault occur?", back: "On an access to a virtual address with no valid mapping or without the needed permission." }
+    - { front: "What is copy-on-write fork?", back: "Parent and child share pages read-only; the first write faults and the kernel copies just that page." }
+    - { front: "Why does each process have its own page table?", back: "Isolation: the same virtual address maps to different physical memory in different processes." }
+    - { front: "What lets the kernel preempt a running process?", back: "A timer interrupt, which traps into the kernel so the scheduler can switch processes." }
+    - { front: "What is saved in a context switch?", back: "The running thread's registers (including the stack pointer and program counter), so it can resume later." }
+    - { front: "What does wait() do?", back: "Blocks the parent until a child exits and returns its PID and exit status." }
+    - { front: "What is a zombie process?", back: "A process that has exited but whose parent has not yet collected its status with wait()." }
+    - { front: "Size of a 39-bit virtual address space?", back: "2^39 bytes = 512 GiB." }
+- slug: w05-concurrency
+  week: RI-W05
+  title: "Concurrency"
+  body: lessons/w05-concurrency.mdx
+  resources: [ostep, bornholt-memory-models]
+  exercises: []
+  cards:
+    - { front: "Define a data race.", back: "Two threads access the same memory location concurrently, at least one writes, and nothing orders the accesses." }
+    - { front: "Why can two threads doing counter++ lose an update?", back: "counter++ is load, add, store; both can load the same value and both store value + 1." }
+    - { front: "Is a data race in C or C++ just a wrong result?", back: "No, it is undefined behaviour." }
+    - { front: "Why wait on a condition variable in a while loop?", back: "Wake-ups can be spurious or the condition can change again before you run; re-check it after every wake-up." }
+    - { front: "What does pthread_cond_wait do with the mutex?", back: "Releases it while sleeping and re-acquires it before returning." }
+    - { front: "The four conditions for deadlock?", back: "Mutual exclusion, hold-and-wait, no preemption, circular wait." }
+    - { front: "How does a global lock order prevent deadlock?", back: "If every thread acquires locks in the same order, a circular wait cannot form." }
+    - { front: "What does a release store paired with an acquire load guarantee?", back: "Every write before the release is visible to the thread after its acquire load reads that value." }
+    - { front: "Default memory order of C11/C++ atomics?", back: "Sequentially consistent (memory_order_seq_cst)." }
+    - { front: "What does ThreadSanitizer detect, and what can't it prove?", back: "It reports data races that happen in a run, by tracking happens-before; it cannot prove that no race exists." }
+    - { front: "Semaphore vs mutex?", back: "A semaphore is a counter (wait decrements, post increments) that can admit N threads; a mutex admits one and is released by its owner." }
+    - { front: "What is lock contention?", back: "Threads spending time waiting for a lock other threads hold, which limits scaling." }
+    - { front: "What is a spinlock and when is it reasonable?", back: "A lock that busy-waits; reasonable only for very short critical sections when threads aren't preempted while holding it." }
+    - { front: "What is false sharing?", back: "Threads writing different variables on the same cache line, so the line bounces between cores." }
+    - { front: "What does the producer/consumer pattern need?", back: "A shared buffer protected by a mutex, plus condition variables (or semaphores) for 'not empty' and 'not full'." }
+- slug: w06-networking
+  week: RI-W06
+  title: "Networking and latency measurement"
+  body: lessons/w06-networking.mdx
+  resources: [beej-net, rfc9112, man-epoll]
+  exercises: []
+  cards:
+    - { front: "Server-side socket calls, in order?", back: "socket, bind, listen, then accept in a loop (one new socket per client)." }
+    - { front: "What does a non-blocking read return when no data is ready?", back: "-1 with errno EAGAIN (or EWOULDBLOCK)." }
+    - { front: "epoll level-triggered vs edge-triggered?", back: "Level-triggered keeps reporting while data remains (the default); edge-triggered reports only on a change, so you must read until EAGAIN." }
+    - { front: "Two ways HTTP/1.1 delimits a message body?", back: "Content-Length, or Transfer-Encoding: chunked (sized chunks ending with a zero-length chunk)." }
+    - { front: "Are HTTP/1.1 connections persistent by default?", back: "Yes, unless either side sends Connection: close." }
+    - { front: "Why report p99 and not only the mean?", back: "The mean hides the tail; p99 is the latency that 1 in 100 requests exceeds, which users of a busy service hit often." }
+    - { front: "What is coordinated omission?", back: "A load generator that waits for each response sends fewer requests exactly when the server is slow, so it under-reports tail latency." }
+    - { front: "Open-loop vs closed-loop load generation?", back: "Open-loop sends at a fixed rate regardless of responses; closed-loop waits for responses before sending more." }
+    - { front: "What must a latency report state?", back: "Tool, request rate, concurrency, warm-up, number of samples, hardware, and percentiles with confidence intervals." }
+    - { front: "Why exclude warm-up requests?", back: "Caches, JIT compilation and connection setup make the first requests unrepresentative." }
+    - { front: "TCP vs UDP in one line each?", back: "TCP: reliable, ordered byte stream with congestion control. UDP: unreliable, unordered datagrams." }
+    - { front: "What is Nagle's algorithm and when does it hurt?", back: "It coalesces small TCP writes; it can add delay to small request/response traffic (disable with TCP_NODELAY)." }
+    - { front: "What does SO_REUSEADDR help with?", back: "Rebinding a listening port quickly after a restart while old connections are still in TIME_WAIT." }
+    - { front: "What is head-of-line blocking in HTTP/1.1?", back: "On one connection, responses come back in request order, so one slow response delays the ones behind it." }
+    - { front: "How do you get a CI for p99 from samples?", back: "Bootstrap: resample with replacement many times, compute p99 each time, and take the 2.5th and 97.5th percentiles of those values." }
+- slug: w07-go-dsa
+  week: RI-W07
+  title: "Go and data structures"
+  body: lessons/w07-go-dsa.mdx
+  resources: [go-tour, effective-go, gossip-glomers, repo-maelstrom]
+  exercises: []
+  cards:
+    - { front: "What is a goroutine?", back: "A function running concurrently, scheduled by the Go runtime onto OS threads." }
+    - { front: "Unbuffered channel send semantics?", back: "The send blocks until a receiver takes the value (a rendezvous)." }
+    - { front: "When does a send on a buffered channel block?", back: "When the buffer is full." }
+    - { front: "What does select do?", back: "Waits on several channel operations and proceeds with one that is ready (randomly chosen if several are)." }
+    - { front: "Are Go maps safe for concurrent writes?", back: "No; protect them with a sync.Mutex (or use sync.Map for specific patterns)." }
+    - { front: "What does sync.WaitGroup do?", back: "Waits until a counter of outstanding goroutines reaches zero (Add, Done, Wait)." }
+    - { front: "How do you find data races in Go?", back: "go test -race (or go run -race); the detector is built on ThreadSanitizer." }
+    - { front: "How do Maelstrom nodes communicate?", back: "JSON messages, one per line, on stdin and stdout; logs go to stderr." }
+    - { front: "Fields of a Maelstrom message?", back: "src, dest and body; body has type and usually msg_id or in_reply_to." }
+    - { front: "What does the init message give a node?", back: "Its own node_id and the list of all node_ids." }
+    - { front: "How do you generate unique IDs while partitioned?", back: "Combine the node's own ID with a local counter (no coordination needed)." }
+    - { front: "Goal of the broadcast challenge?", back: "Every node eventually has every value, despite partitions, with few messages." }
+    - { front: "Time complexity of push and pop on a binary heap?", back: "O(log n) each; peek is O(1)." }
+    - { front: "Why does BFS find shortest paths in unweighted graphs?", back: "It visits nodes in order of distance from the start, one layer at a time." }
+    - { front: "What does `defer` do in Go?", back: "Schedules a call to run when the surrounding function returns, in last-in-first-out order." }
+- slug: w08-db-internals
+  week: RI-W08
+  title: "Database internals and performance diagnosis"
+  body: lessons/w08-db-internals.mdx
+  resources: [cmu-15445, repo-bustub, gregg-flamegraphs, go-diagnostics]
+  exercises: []
+  cards:
+    - { front: "What does a buffer pool do?", back: "Holds disk pages in a fixed number of memory frames and decides which page to evict when it needs a frame." }
+    - { front: "Why do databases manage their own buffer pool?", back: "They know their access patterns and durability rules better than the OS page cache does." }
+    - { front: "What does pinning a page mean?", back: "It is in use, so it cannot be evicted until its pin count drops to zero." }
+    - { front: "What must happen before a dirty frame is reused?", back: "The page must be written back to disk." }
+    - { front: "Weakness of plain LRU for databases?", back: "One large sequential scan can evict every hot page." }
+    - { front: "What is LRU-K's backward K-distance?", back: "The time since a page's K-th most recent access; LRU-K evicts the page where it is largest." }
+    - { front: "How does LRU-K treat a page with fewer than K accesses?", back: "Its distance counts as infinite, so it is evicted first (ties broken by the oldest access)." }
+    - { front: "How does CLOCK approximate LRU?", back: "One reference bit per frame; a hand sweeps, clearing set bits and evicting the first frame whose bit is already clear." }
+    - { front: "What does a flame graph's width mean?", back: "The share of profile samples in that function (and its children); the x-axis order is not time." }
+    - { front: "Sampling vs instrumenting profilers?", back: "Sampling records stacks at intervals (low overhead); instrumenting records every call (exact counts, higher overhead)." }
+    - { front: "First question when a service is slow?", back: "Where does the time go: CPU, lock contention, I/O or memory? Measure before changing anything." }
+    - { front: "When can you claim a fix made something faster?", back: "When before/after confidence intervals don't overlap in the claimed direction, measured on the same machine." }
+    - { front: "Tool to profile a Go program?", back: "pprof (runtime/pprof or net/http/pprof), viewed with go tool pprof." }
+    - { front: "Why are database pages fixed-size?", back: "It simplifies allocation, buffering and disk I/O, which happens in blocks." }
+    - { front: "What may you publish from BusTub work?", back: "Write-ups and analysis; the course rules forbid coding agents on P1-P2 and may ask you not to publish solution code." }

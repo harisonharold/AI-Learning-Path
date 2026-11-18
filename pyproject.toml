@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 package = false
 
 [tool.uv.workspace]
-members = ["services/common", "services/api-py", "services/worker-py"]
+members = ["services/common", "services/api-py", "services/worker-py", "cli/atlas-lab"]
 
 [tool.uv.sources]
 atlas-common = { workspace = true }
@@ -27,9 +27,11 @@ ignore = ["S101"]
 [tool.ruff.lint.per-file-ignores]
 # Practice tests run after the learner's code in the same namespace, so the function under test is defined at runtime.
 "content/exercises/*/practice_tests.py" = ["F821"]
+# Gate bundle tests run in the same namespace as the learner's solution (atlas-lab harness).
+"content/gate-tests/*/test_*.py" = ["F821"]
 
 [tool.pyright]
-include = ["services"]
+include = ["services", "cli"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
@@ -41,6 +43,6 @@ venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
-testpaths = ["services"]
+testpaths = ["services", "cli"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

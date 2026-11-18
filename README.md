@@ -6,11 +6,11 @@ Four to six months will not make anyone an expert, and this app cannot promise i
 
 Repository: https://github.com/harisonharold/AI-Learning-Path
 
-Status: **phase P0 (groundwork)**. See `PROGRESS.md` for what works and what doesn't, and `PLAN.md` for the full plan.
+Status: **phases P0-P2 built** (groundwork, learning core, lab), each awaiting review in its own pull request. See `PROGRESS.md` for what works and what doesn't, and `PLAN.md` for the full plan.
 
 ## Run it (one command)
 
-Requirements: Docker with Compose v2, Node ≥ 24, pnpm 10 (`corepack enable`).
+Requirements: Docker with Compose v2, Node ≥ 24, pnpm 10 (`corepack enable`), and uv for the Python parts and atlas-lab.
 
 ```sh
 pnpm install
@@ -23,6 +23,9 @@ pnpm up        # writes .env with fresh random secrets on first run, builds, sta
 - Jaeger UI (dev only): http://localhost:16686.
 
 Stop with `pnpm down`.
+
+### The lab and atlas-lab
+Experiments live under **Research → projects**. Pre-register a hypothesis, then upload runs. Uploads go through the [`atlas-lab` runner](cli/atlas-lab/README.md), which records the environment, runs gate tests in Docker with no network and uploads with a scoped token, or as a JSON file in the browser. The server recomputes every statistic from raw samples. **Benchmark analytics** shows CDFs, percentiles with bootstrap CIs and GPU timelines. Reports are Markdown/HTML and keep failed runs. To explore first, turn on **Settings → Sample data** (labelled SAMPLE DATA, never counted).
 
 ### GitHub sign-in
 Create a GitHub App from `infra/github-app/manifest.json`. It is read-only (metadata, contents, issues and pull requests) and has no webhooks. Set its callback URL to `http://localhost:3000/api/auth/callback/github`, then put the client id and secret in `.env`.
@@ -37,7 +40,7 @@ The Dockerfiles take an optional `HTTPS_PROXY` build arg and a BuildKit secret `
 ```sh
 pnpm lint && pnpm typecheck && pnpm test          # ESLint (+ module boundaries), tsc, unit
 pnpm test:int                                     # Testcontainers MySQL 8.4 + Redis 7
-uv sync --all-packages && uv run ruff check . && uv run pyright && uv run pytest
+uv sync --all-packages && uv run ruff check . && uv run pyright && uv run pytest   # services + atlas-lab
 pnpm up:test && sh infra/scripts/compose-smoke.sh -f infra/compose/compose.test.yaml   # AT-01
 pnpm exec playwright test --trace off             # e2e + axe (needs the test stack)
 sh infra/ci/build-and-scan.sh                     # AT-03 secrets-in-bundle
@@ -51,8 +54,10 @@ apps/web            Next.js 16: UI, API route handlers, Better Auth, Drizzle (on
   modules/{auth,platform,...}/service.ts   public surface of each module (lint-enforced)
 apps/worker-node    BullMQ worker (GitHub sync, mentor, verification arrive later)
 services/api-py     FastAPI compute (HMAC-signed calls only)
-services/worker-py  BullMQ Python worker; posts results back over HMAC
-packages/contracts  JSON Schemas + HMAC test vectors shared by TS and Python
+services/worker-py  BullMQ Python worker (stats, reports); posts results back over HMAC
+cli/atlas-lab       local runner: env capture, gate tests in Docker --network none, benchmark uploads
+packages/contracts  generated JSON Schemas, fixtures, HMAC and canonical-JSON vectors shared by TS and Python
+content/            curriculum, lessons, quizzes, exercises, gate test bundles (content/gate-tests)
 packages/ui         design tokens and components
 infra/              compose, caddy, mysql, CI scripts, GitHub App manifest
 docs/spec           the specification; PLAN.md, THREAT_MODEL.md, docs/DATA_MODEL.md

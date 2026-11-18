@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { apiError, completeJob, errors, getEnv, log, redisNonceStore, verifyRequest } from "@/modules/platform/service";
+import { apiError, completeJob, errors, getEnv, getJob, log, redisNonceStore, verifyRequest } from "@/modules/platform/service";
+import { applyJobResult } from "@/modules/research/service";
 
 const Body = z
   .object({ status: z.enum(["done", "failed"]), result: z.unknown().optional(), error: z.string().max(4000).nullable().optional(), attempts: z.number().int().min(0).max(50) })
@@ -9,7 +10,7 @@ const Body = z
 /** worker-py callback. HMAC + timestamp + nonce (D-16). Blocked at Caddy for the public internet (X-02). */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const raw = await req.text();
-  if (raw.length > 1_000_000) return apiError(413, "TOO_LARGE", "Callback body too large.");
+  if (raw.length > 8_000_000) return apiError(413, "TOO_LARGE", "Callback body too large.");
   const path = new URL(req.url).pathname;
   const v = await verifyRequest(getEnv().INTERNAL_HMAC_KEY, redisNonceStore(), { method: "POST", path, headers: (n) => req.headers.get(n), body: raw });
   if (!v.ok) {
@@ -29,5 +30,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const { id } = await ctx.params;
   const applied = await completeJob(id, body.data.status, body.data.result, body.data.error ?? null, body.data.attempts);
   if (!applied) return apiError(409, "JOB_NOT_OPEN", "Job is unknown or already finished.");
+  const job = await getJob(id);
+  if (job && (job.kind === "stats.summarize" || job.kind === "report.render")) await applyJobResult(job);
   return NextResponse.json({ ok: true });
 }

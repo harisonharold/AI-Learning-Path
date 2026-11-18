@@ -157,6 +157,7 @@ export const runs = mysqlTable(
     source: mysqlEnum("source", ["runner", "upload", "notebook"]).notNull(),
     runnerTokenId: fk("runner_token_id").references(() => runnerTokens.id, { onDelete: "set null" }),
     uploadSha256: char("upload_sha256", { length: 64 }),
+    command: varchar("command", { length: 2000 }),
     startedAt: dt("started_at"),
     endedAt: dt("ended_at"),
     isMock: isMock(),
@@ -202,4 +203,23 @@ export const runGpuTimeline = mysqlTable(
     powerW: double("power_w"),
   },
   (t) => [primaryKey({ columns: [t.runId, t.seq] })],
+);
+
+/** Generated experiment reports (Markdown + HTML only, D-20). Rendered by worker-py from stored runs (§9 #23). */
+export const projectReports = mysqlTable(
+  "project_reports",
+  {
+    id: id(),
+    projectId: fk("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    userId: userFk(),
+    jobId: char("job_id", { length: 36 }).notNull(),
+    status: mysqlEnum("status", ["queued", "done", "failed"]).notNull().default("queued"),
+    markdown: mediumtext("markdown"),
+    html: mediumtext("html"),
+    runIds: json("run_ids").$type<number[]>().notNull(),
+    error: text("error"),
+    createdAt: createdAt(),
+    finishedAt: dt("finished_at"),
+  },
+  (t) => [index("project_reports_project_idx").on(t.projectId), uniqueIndex("project_reports_job_uq").on(t.jobId)],
 );

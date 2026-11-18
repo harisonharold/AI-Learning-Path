@@ -218,8 +218,9 @@ describe("AT-10 via the API: diagnostic", () => {
     expect(res.skips.map((s: { weekId: string }) => s.weekId)).toEqual(["RI-W01", "RI-W02", "RI-W03"]);
   });
   it("a diagnostic quiz cannot be used to skip beyond week 3", async () => {
+    // q-w04 exists since P2, so this is refused for the week, not for a missing quiz.
     const r = await routes.attempts.POST(post("/api/gates/g-w04/attempts", { type: "quiz", quiz: "q-w04", answers: {}, viaDiagnostic: true }), p("g-w04"));
-    expect([404, 422]).toContain(r.status);
+    expect(r.status).toBe(422);
   });
 });
 

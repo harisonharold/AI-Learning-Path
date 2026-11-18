@@ -14,7 +14,11 @@ export default function Page() {
       </section>
       <section className="panel text-sm" aria-labelledby="proj-title">
         <h2 id="proj-title" className="text-xl">Projects, runs and benchmarks</h2>
-        <p className="mt-1">Research projects, benchmark uploads, the atlas-lab runner and analytics arrive in phase P2.</p>
+        <ul className="mt-2 list-disc pl-6">
+          <li><Link href="/research/projects">Research projects</Link>: pre-register, upload runs, generate reports.</li>
+          <li><Link href="/analytics/benchmarks">Benchmark analytics</Link>: CDFs, percentiles with bootstrap CIs, GPU timelines, diffs.</li>
+          <li>atlas-lab runner tokens live in <Link href="/settings">Settings</Link>.</li>
+        </ul>
       </section>
     </div>
   );

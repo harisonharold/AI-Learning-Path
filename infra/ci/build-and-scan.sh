@@ -11,7 +11,7 @@ export GITHUB_APP_CLIENT_ID=Iv1.canary APP_ORIGIN=http://localhost:3000 SANDBOX_
 export NEXT_TELEMETRY_DISABLED=1
 pnpm --filter @atlas/web build >/dev/null
 # X-06: answer keys and reference solutions carry canaries; they must never reach the browser or the sandbox.
-CONTENT_CANARIES=$(grep -rhoE "atlas-(answer-key|solution)-canary-[a-z0-9-]+" content | sort -u | paste -sd, -)
+CONTENT_CANARIES=$(grep -rhoE "atlas-(answer-key|solution|gate)-canary-[a-z0-9-]+" content | sort -u | paste -sd, -)
 [ -n "$CONTENT_CANARIES" ] || { echo "no content canaries found"; exit 1; }
 ALL="$BETTER_AUTH_SECRET,$INTERNAL_HMAC_KEY,$GITHUB_APP_CLIENT_SECRET,$MYSQL_CANARY,$REDIS_CANARY,$TOKEN_ENC_KEY,$CONTENT_CANARIES"
 CANARY_VALUES="$ALL" node infra/ci/scan-bundle.mjs apps/web/.next/static

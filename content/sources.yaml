@@ -110,3 +110,99 @@
   verification: unverified
   verified_at: null
   verify_method: "not yet checked"
+# Added 2026-11-18 for the week 4-8 lessons. The first group is recorded in docs/spec/SOURCES.md (checked 2026-11-16).
+- id: mit-6-1810
+  kind: course
+  url: https://pdos.csail.mit.edu/6.828/2026/
+  title: "MIT 6.1810 Operating System Engineering, Fall 2026 (xv6)"
+  note: "OS labs on xv6-riscv"
+  verification: verified
+  verified_at: 2026-11-16
+  verify_method: "HTTP GET + title (SOURCES §4)"
+- id: repo-xv6-riscv
+  kind: repo
+  url: https://github.com/mit-pdos/xv6-riscv
+  title: "mit-pdos/xv6-riscv: Xv6 for RISC-V"
+  licence: NOASSERTION
+  last_activity_at: 2026-11-05
+  verification: verified
+  verified_at: 2026-11-16
+  verify_method: "GitHub REST API (SOURCES §1)"
+- id: go-tour
+  kind: doc
+  url: https://go.dev/tour/
+  title: "A Tour of Go"
+  verification: verified
+  verified_at: 2026-11-16
+  verify_method: "HTTP GET + title (SOURCES §4)"
+- id: effective-go
+  kind: doc
+  url: https://go.dev/doc/effective_go
+  title: "Effective Go"
+  verification: verified
+  verified_at: 2026-11-16
+  verify_method: "HTTP GET + title (SOURCES §4)"
+- id: gossip-glomers
+  kind: course
+  url: https://fly.io/dist-sys/
+  title: "Fly.io Gossip Glomers"
+  note: "Six challenges run on Maelstrom: echo, unique IDs, broadcast, grow-only counter, Kafka-style log, transactions"
+  verification: verified
+  verified_at: 2026-11-16
+  verify_method: "HTTP GET + title (SOURCES §4)"
+- id: repo-maelstrom
+  kind: repo
+  url: https://github.com/jepsen-io/maelstrom
+  title: "jepsen-io/maelstrom: a workbench for toy distributed systems"
+  licence: EPL-1.0
+  last_activity_at: 2026-07-10
+  verification: verified
+  verified_at: 2026-11-16
+  verify_method: "GitHub REST API (SOURCES §1)"
+- id: cmu-15445
+  kind: course
+  url: https://15445.courses.cs.cmu.edu/fall2026/
+  title: "CMU 15-445/645 Database Systems, Fall 2026"
+  note: "The page states P1-P2 prohibit coding agents; P3-P4 permit them. We apply the same rule to self-study."
+  verification: verified
+  verified_at: 2026-11-16
+  verify_method: "HTTP GET + title (SOURCES §4)"
+- id: repo-bustub
+  kind: repo
+  url: https://github.com/cmu-db/bustub
+  title: "cmu-db/bustub: educational relational DBMS"
+  licence: MIT
+  last_activity_at: 2026-11-13
+  verification: verified
+  verified_at: 2026-11-16
+  verify_method: "GitHub REST API (SOURCES §1)"
+# Not yet checked: these hosts were unreachable from the build environment on 2026-11-18. Shown as "Unverified"
+# until the P3-core verification job checks them.
+- id: rfc9112
+  kind: doc
+  url: https://www.rfc-editor.org/rfc/rfc9112
+  title: "RFC 9112: HTTP/1.1"
+  verification: unverified
+  verified_at: null
+  verify_method: "not checked yet: host unreachable from the build environment on 2026-11-18"
+- id: man-epoll
+  kind: doc
+  url: https://man7.org/linux/man-pages/man7/epoll.7.html
+  title: "epoll(7), Linux manual page"
+  verification: unverified
+  verified_at: null
+  verify_method: "not checked yet: host unreachable from the build environment on 2026-11-18"
+- id: gregg-flamegraphs
+  kind: doc
+  url: https://www.brendangregg.com/flamegraphs.html
+  title: "Brendan Gregg: Flame Graphs"
+  verification: unverified
+  verified_at: null
+  verify_method: "not checked yet: host unreachable from the build environment on 2026-11-18"
+- id: go-diagnostics
+  kind: doc
+  url: https://go.dev/doc/diagnostics
+  title: "Go: Diagnostics (profiling with pprof, tracing)"
+  verification: unverified
+  verified_at: null
+  verify_method: "not checked yet: host unreachable from the build environment on 2026-11-18"

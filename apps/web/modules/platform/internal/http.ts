@@ -24,3 +24,26 @@ export function sameOrigin(req: Request, appOrigin: string): boolean {
   const site = req.headers.get("sec-fetch-site");
   return site === "same-origin";
 }
+
+/** Reads a request body as text, aborting as soon as it exceeds `max` bytes (streamed check, no full buffering). */
+export async function readBodyLimited(req: Request, max: number): Promise<{ text: string; bytes: Buffer } | { response: Response }> {
+  const declared = Number(req.headers.get("content-length") ?? "0");
+  const tooLarge = () => apiError(413, "TOO_LARGE", `Upload exceeds ${Math.round(max / 1024 / 1024)} MB.`, { maxBytes: max });
+  if (declared > max) return { response: tooLarge() };
+  if (!req.body) return { text: "", bytes: Buffer.alloc(0) };
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel();
+      return { response: tooLarge() };
+    }
+    chunks.push(value);
+  }
+  const bytes = Buffer.concat(chunks);
+  return { text: bytes.toString("utf8"), bytes };
+}

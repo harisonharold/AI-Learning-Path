@@ -3,7 +3,32 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
-import { Curriculum, Diagnostic, Exercise, Lesson, Quiz, Source, validateContent, type Content } from "./content-schema.ts";
+import { createHash } from "node:crypto";
+import { Curriculum, Diagnostic, Exercise, GateBundle, Lesson, Quiz, Source, validateContent, type Content, type LoadedBundle } from "./content-schema.ts";
+
+/** Same canonical JSON as research's contract and atlas-lab (sorted keys, no whitespace); the bundle hash must agree. */
+function canonical(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) return `[${v.map(canonical).join(",")}]`;
+  const o = v as Record<string, unknown>;
+  return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${canonical(o[k])}`).join(",")}}`;
+}
+
+/** sha256 over {manifest, files}: what atlas-lab verifies after download and reports back with its result. */
+export function bundleSha(manifest: GateBundle, files: Record<string, string>): string {
+  return createHash("sha256").update(canonical({ manifest, files })).digest("hex");
+}
+
+function loadBundles(dir: string): Map<string, LoadedBundle> {
+  const root = join(dir, "gate-tests");
+  let entries: string[] = [];
+  try { entries = readdirSync(root); } catch { return new Map(); }
+  return new Map(entries.map((d) => {
+    const manifest = GateBundle.parse(parse(readFileSync(join(root, d, "bundle.yaml"), "utf8")));
+    const fileContents = Object.fromEntries(manifest.files.map((f) => [f, readFileSync(join(root, d, f), "utf8")] as const));
+    return [manifest.ref, { ...manifest, fileContents, sha256: bundleSha(manifest, fileContents) }] as const;
+  }));
+}
 
 /** Repo content directory. In containers CONTENT_DIR points at the copied /app/content. */
 export function contentDir(): string {
@@ -25,7 +50,7 @@ export function loadContent(dir = contentDir()): Content {
   );
   const diagnostic = Diagnostic.parse(y("diagnostic.yaml"));
   const lessonBodies = new Map(lessons.map((l) => [l.slug, readFileSync(join(dir, l.body), "utf8")] as const));
-  const content: Content = { curriculum, sources, lessons, quizzes, exercises, diagnostic, lessonBodies };
+  const content: Content = { curriculum, sources, lessons, quizzes, exercises, diagnostic, lessonBodies, gateBundles: loadBundles(dir) };
   const errs = validateContent(content);
   if (errs.length) throw new Error(`content invalid:\n${errs.join("\n")}`);
   return content;

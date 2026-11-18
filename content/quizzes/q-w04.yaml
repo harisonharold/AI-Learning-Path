@@ -1,0 +1,46 @@
+# Server-side only (X-06): answers never reach the browser. Graded by modules/learning (server_graded evidence).
+id: q-w04
+title: "Week 4 virtual-memory quiz"
+pass_pct: 80
+canary: "atlas-answer-key-canary-q-w04-3c9e"
+questions:
+  - id: q1
+    prompt: "With 4 KiB pages, how many low bits of a virtual address are the offset inside the page?"
+    choices: ["9", "12", "16", "21"]
+    answer: 1
+  - id: q2
+    prompt: "RISC-V Sv39 (used by xv6) translates a virtual address through how many page-table levels?"
+    choices: ["1", "2", "3", "4"]
+    answer: 2
+  - id: q3
+    prompt: "In Sv39, each page-table level has how many entries?"
+    choices: ["256", "512", "1024", "4096"]
+    answer: 1
+  - id: q4
+    prompt: "What does the TLB cache?"
+    choices: ["Recently used file pages", "Recent virtual-to-physical translations", "The kernel's free-page list", "Instruction bytes near the program counter"]
+    answer: 1
+  - id: q5
+    prompt: "What does fork() return in the child process?"
+    choices: ["The parent's PID", "The child's own PID", "0", "-1"]
+    answer: 2
+  - id: q6
+    prompt: "With copy-on-write fork, when is a page actually copied?"
+    choices: ["Immediately at fork", "When either process first writes to it", "When the child calls exec", "Never; pages stay shared"]
+    answer: 1
+  - id: q7
+    prompt: "A process reads a virtual address that has no valid page-table entry. What happens first?"
+    choices: ["The CPU returns zero", "The read goes to physical address 0", "A page fault traps into the kernel", "The process is killed by the TLB"]
+    answer: 2
+  - id: q8
+    prompt: "Why does each process have its own page table?"
+    choices: ["To make the TLB larger", "So the same virtual address can map to different physical memory per process", "Because the kernel has no page table", "To avoid needing system calls"]
+    answer: 1
+  - id: q9
+    prompt: "What lets the kernel take the CPU back from a process that never makes a system call?"
+    choices: ["A timer interrupt", "The TLB", "Copy-on-write", "The page-table walker"]
+    answer: 0
+  - id: q10
+    prompt: "How large is a 39-bit virtual address space?"
+    choices: ["4 GiB", "64 GiB", "512 GiB", "256 TiB"]
+    answer: 2

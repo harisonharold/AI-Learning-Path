@@ -60,6 +60,7 @@ Status: **Revision 2 — approved with changes 2026-11-16** (practice checks, al
 | `run_metrics` | `run_id FK`, `metric`, `unit`, `summary_json` (server-computed), `client_summary_json` **[Δ]**, `n INT`, `raw_uri` | PK(run_id, metric) | Client summary kept only for audit/diff, never displayed as truth (AT-15) |
 | `run_samples` | `run_id FK`, `metric`, `seq INT`, `value DOUBLE`, `t_ms BIGINT` | PK(run_id, metric, seq) | **Cap: 100 000 samples per (run, metric)**; overflow written to `raw-data` volume as gzip JSON, `raw_uri` set, server summary computed from the full set before truncation |
 | `run_gpu_timeline` **[Δ]** | `run_id FK`, `seq`, `t_ms`, `util_pct`, `mem_mb`, `power_w NULL` | PK(run_id, seq) | Upload contract has `gpu_timeline`; G §3 has nowhere to store it. Cap 50 000 points |
+| `project_reports` **[Δ, P2]** | `id`, `project_id FK`, `user_id FK`, `job_id CHAR(36)`, `status`, `markdown MEDIUMTEXT`, `html MEDIUMTEXT`, `run_ids JSON`, `error`, `created_at`, `finished_at` | INDEX(project_id), UNIQUE(job_id) | Markdown + HTML only (D-20); HTML built from escaped text by worker-py; downloaded as an attachment (§9 #23) |
 
 ## 5. GitHub
 
@@ -144,5 +145,6 @@ Redis holds no secrets and no record whose loss changes evidence; losing it only
 | 20 | Redis nonce keys (§7a) | Approved fix: HMAC replay protection (D-16, X-10) |
 | 22 | `attempt_evidence.passed`, `ref`, `quiz_id` (migration 0002, P1) | The outcome of objective evidence and which requirement it answers (runner ref or quiz) are real columns, not encoded in `verify_method` (PLAN D-43) |
 | 21 | Auth rows only for the allowlisted GitHub id | Approved fix: single-account sign-up (D-08, X-01). AT-04's second user is inserted by test fixtures directly, never through sign-up |
+| 23 | `project_reports` table (`id`, `project_id FK`, `user_id FK`, `job_id` unique, `status ENUM(queued,done,failed)`, `markdown`, `html`, `run_ids JSON`, `error`, `created_at`, `finished_at`) and `runs.command VARCHAR(2000)` (migration 0003, P2) | Reports need storage with their exact run set; F.6 asks for the exact command. `run_metrics.summary_json` holds the server summary (n, mean, stdev, min, max, p25/p50/p75/p95/p99) plus, once worker-py has run, `ci95`, `ci_method`, `resamples`, `seed`, `basis_n`, `histogram`, `cdf` and `ci_status` (PLAN D-56) |
 
 Nothing in G §3 is removed.

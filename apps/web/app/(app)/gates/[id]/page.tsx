@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@atlas/ui";
 import { StateBadge } from "@/components/StateBadge";
 import { pageUser } from "@/modules/auth/service";
-import { gate, LearningError } from "@/modules/learning/service";
+import { gate, getContent, LearningError } from "@/modules/learning/service";
 import { ArtifactForm, QuizForm, RubricForm } from "./client";
 
 export const dynamic = "force-dynamic";
@@ -10,8 +10,16 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: `Gate ${(await params).id}` };
 }
 
+/** The atlas-lab command for a runner requirement, or an honest note when its hidden tests aren't published yet. */
+function runnerHint(ref: string | undefined): string {
+  const c = getContent();
+  if (!ref || !c.gateBundles.has(ref)) return "The hidden tests for this requirement are not published yet; they arrive with this week's lessons.";
+  const ex = [...c.exercises.values()].find((e) => e.gate_tests_ref === ref);
+  return `Command: atlas-lab run ${ex ? ex.id : ref}`;
+}
+
 const SOURCE_NOTE: Record<string, string> = {
-  runner_result: "Uploaded by atlas-lab from your machine (arrives in P2).",
+  runner_result: "Hidden tests run by atlas-lab in Docker (no network) on your machine, then uploaded.",
   server_graded: "Graded on the server; answers never reach the browser.",
   github_commit: "Verified through the read-only GitHub API (arrives in P4).",
   github_ci: "Verified through the read-only GitHub API (arrives in P4).",
@@ -47,7 +55,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           {g.evaluation.requirements.map((r) => (
             <li key={r.requirement.label} data-requirement={r.requirement.kind} data-satisfied={r.satisfied}>
               <div className="flex flex-wrap items-center gap-2"><span>{r.requirement.label}</span><StateBadge state={r.satisfied ? "passed" : r.failed ? "failed" : "pending_evidence"} /></div>
-              <p className="text-xs text-[var(--ink-muted)]">{SOURCE_NOTE[r.requirement.kind]} Status: {r.reason}.{r.requirement.kind === "runner_result" ? ` Command: atlas-lab run ${r.requirement.ref?.replace("atlas-lab:", "").replace(/@\d+$/, "")}` : ""}</p>
+              <p className="text-xs text-[var(--ink-muted)]">{SOURCE_NOTE[r.requirement.kind]} Status: {r.reason}.{r.requirement.kind === "runner_result" ? ` ${runnerHint(r.requirement.ref)}` : ""}</p>
             </li>
           ))}
         </ul>

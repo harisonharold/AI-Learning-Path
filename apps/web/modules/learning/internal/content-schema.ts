@@ -118,6 +118,26 @@ export const Exercise = z
   .strict();
 export type Exercise = z.infer<typeof Exercise>;
 
+/** atlas-lab gate test bundle (content/gate-tests/<id>@<version>/bundle.yaml). Never served to the browser (X-06). */
+export const GateBundle = z
+  .object({
+    ref: z.string().regex(/^atlas-lab:[a-z0-9-]+@[0-9]+$/),
+    exercise: id,
+    title: z.string(),
+    image: z.string().regex(/^[a-z0-9./_-]+:[\w.-]+@sha256:[0-9a-f]{64}$/, "image must be pinned by digest (THREAT T-C2)"),
+    command: z.array(z.string()).min(1),
+    submission: z.string().regex(/^[\w.-]+$/),
+    timeout_seconds: z.number().int().min(5).max(3600),
+    memory_mb: z.number().int().min(64).max(16384),
+    cpus: z.number().min(0.25).max(16),
+    canary: z.string().min(8),
+    files: z.array(z.string().regex(/^[\w.-]+$/)).min(1),
+    tests: z.array(z.string().regex(/^test_\w+$/)).min(1),
+  })
+  .strict();
+export type GateBundle = z.infer<typeof GateBundle>;
+export type LoadedBundle = GateBundle & { fileContents: Record<string, string>; sha256: string };
+
 const DiagItem = z.discriminatedUnion("kind", [
   z.object({ id, skill: id, kind: z.literal("mcq"), prompt: z.string(), choices: z.array(z.string()).min(2), answer: z.number().int() }).strict(),
   z.object({ id, skill: id, kind: z.literal("short_answer"), prompt: z.string() }).strict(),
@@ -135,11 +155,21 @@ export interface Content {
   exercises: Map<string, Exercise & { practiceTests: string }>;
   diagnostic: Diagnostic;
   lessonBodies: Map<string, string>;
+  gateBundles: Map<string, LoadedBundle>;
 }
 
 /** Cross-reference checks. Returns a list of problems (empty = valid). */
 export function validateContent(c: Content): string[] {
   const errs: string[] = [];
+  for (const b of c.gateBundles.values()) {
+    const ex = c.exercises.get(b.exercise);
+    if (!ex) errs.push(`bundle ${b.ref} names unknown exercise ${b.exercise}`);
+    else if (ex.gate_tests_ref !== b.ref) errs.push(`exercise ${ex.id} points at ${ex.gate_tests_ref}, not bundle ${b.ref}`);
+    const defined = new Set(Object.values(b.fileContents).flatMap((t) => [...t.matchAll(/^def (test_\w+)\(/gm)].map((m) => m[1]!)));
+    const listed = new Set(b.tests);
+    if (defined.size !== listed.size || [...listed].some((t) => !defined.has(t))) errs.push(`bundle ${b.ref}: tests list does not match the test functions defined`);
+    if (!Object.values(b.fileContents).some((t) => t.includes(b.canary))) errs.push(`bundle ${b.ref}: canary missing from its files`);
+  }
   const skills = new Set(c.curriculum.skills.map((s) => s.id));
   const sources = new Set(c.sources.map((s) => s.id));
   const riIds = new Set(c.curriculum.ri_weeks.map((w) => w.id));

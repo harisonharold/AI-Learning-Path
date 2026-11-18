@@ -89,10 +89,12 @@ Format: threat → mitigation → test.
 |---|---|---|---|---|
 | T-R1 | S | Stolen/expired token uploads | Hashed, scoped `results:write`, expiring (≤ 90 d), revocable; `last_used_at` shown | **AT-18** |
 | T-R2 | T | Upload claims numbers not supported by samples | Server recomputes summaries from samples; client summary stored only for diff | **AT-15** |
-| T-R3 | D | Oversized / zip-bomb / deeply nested JSON | Streaming 20 MB cap, no compression accepted, JSON depth limit, schema validation → 422 | **AT-16** |
-| T-R4 | I | Runner leaks token in logs / shell history | `atlas-lab login` reads token from stdin prompt; config file 0600; token redacted in CLI logs | CLI U test |
-| T-R5 | E | Exercise container escapes to the learner's machine or network | `docker run --network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit --memory --cpus`, non-root user, images pinned by digest | CLI U test on generated argv |
-| T-R6 | D (money) | Forgotten rented GPU keeps billing | Pre-flight `hours × rate` print, `timeout`, written auto-shutdown script, `--max-hours` | **AT-17** |
+| T-R3 | D | Oversized / zip-bomb / deeply nested JSON | Streaming 20 MB cap (aborts mid-stream), no compression accepted, `config` limited to 8 levels and 64 KB, max 32 metrics × 1M samples, schema validation → 422; uploads rate-limited per user and per token (Redis, fails closed) | **AT-16**, `research.test.ts` (413), `contract.test.ts` (T-R3) |
+| T-R4 | I | Runner leaks token in logs / shell history | `atlas-lab login --token` prompts with hidden input (or `--token-stdin`); no command-line value; config file 0600; token redacted from CLI output; the token is removed from the benchmark's environment | `cli/atlas-lab/tests/test_config_and_cli.py`, `test_runner.py` |
+| T-R5 | E | Exercise container escapes to the learner's machine or network | `docker run --network none --read-only --tmpfs /tmp:noexec --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory --cpus --user 65534`, bundle and solution mounted read-only, images pinned by digest | `test_gate.py` (argv + a real Docker run in which a learner socket call fails), e2e `p2-lab.spec.ts` |
+| T-R6 | D (money) | Forgotten rented GPU keeps billing | Pre-flight `hours × rate` print, per-repetition `--timeout`, session `--max-hours`, written (not executed) auto-shutdown script | **AT-17** (`test_dry_run.py`) |
+| T-R7 | T | A tampered or stale gate bundle is run, or a result claims tests the bundle doesn't have | Bundle hash over manifest + files verified by atlas-lab before running and by the server on upload; the result must list exactly the bundle's tests | `research.test.ts`, `gate-bundles.test.ts`, `test_gate.py` |
+| T-R8 | I/T | A report injects script into whoever opens it | Reports are built from escaped text only (no user markup), served as attachments with `CSP: default-src 'none'; sandbox` and `nosniff` | `test_report.py`, e2e AT-19 |
 
 ### TB8 worker-node → GitHub
 | ID | | Threat | Mitigation | Test |
@@ -228,4 +230,6 @@ Revision 2 status: items 1–8 resolved by approved decisions — 1 → D-17/X-0
 | RR7 | OWASP category lists cited from memory | Marked UNVERIFIED; X-15 live check is a P7 exit condition |
 | RR8 | A sandbox *subdomain* is same-site with the app (cross-origin, but `SameSite=Lax` treats it as same-site) | Cookies are host-only and never sent to it, it serves only static files, and its results can't count; a separate registrable domain would remove this (Q21) |
 | RR9 | `safeFetch` blocklist misses a future special-use range | Ranges kept in one constant with a test per range; reviewed with dependency updates |
+| RR11 | A `tests:read` token can download hidden gate tests, so the learner could read them before solving | Single user; the tests live on the learner's own machine during the run anyway (RR1). Gates that matter pair them with server-graded or rubric-scored evidence, and exams get a new hidden set on re-attempt (D-60, Q27) |
+| RR12 | Runs above 100,000 samples per metric keep only the first 100,000 in the database; compare and reports use those, while upload-time summaries use all samples (the rest is in the gzip file) | Rare for single-machine benchmarks; tracked in TASKS to read the raw file instead |
 | RR10 | Better Auth's token encryption has no AAD, so its ciphertexts are not bound to a row | Single account by design; DB write access is already full compromise; our own scheme (§3a) does bind with AAD |

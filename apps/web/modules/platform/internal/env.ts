@@ -20,6 +20,8 @@ const schema = z
     TOKEN_ENC_KEY_ID: z.coerce.number().int().min(1).max(255).default(1),
     INTERNAL_HMAC_KEY: z.string().refine((v) => Buffer.byteLength(v) >= 32, "must be at least 32 bytes"),
     API_PY_URL: z.url().default("http://api-py:8000"),
+    // Raw samples beyond the per-metric DB cap are written here as gzip JSON (DATA_MODEL run_samples).
+    RAW_DATA_DIR: z.string().startsWith("/").default("/data/raw"),
     /** Requests per minute per client on /api/auth/*. Raised only in the e2e overlay. */
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(5).max(10_000).default(30),
     /** Sign-in starts per 10 s per client (Better Auth default 3). Raised only in the e2e overlay. */
@@ -87,4 +89,9 @@ export function githubEndpoints(env: Env) {
     token: env.GITHUB_OAUTH_TOKEN_URL ?? "https://github.com/login/oauth/access_token",
     api: env.GITHUB_API_URL ?? "https://api.github.com",
   };
+}
+
+/** Tests only: forget the cached env so a changed process.env is re-read. */
+export function resetEnvForTests() {
+  cached = undefined;
 }

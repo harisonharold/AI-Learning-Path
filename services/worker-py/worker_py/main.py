@@ -16,7 +16,7 @@ from bullmq import Job, Worker  # pyright: ignore[reportMissingTypeStubs]
 from opentelemetry import trace
 
 from worker_py.callback import post_result
-from worker_py.handlers import handle
+from worker_py.handlers import BadJobInput, handle
 
 QUEUE = "atlas-py"
 
@@ -55,10 +55,12 @@ async def run() -> None:
         attempts = int(job.attemptsMade) + 1  # pyright: ignore[reportUnknownArgumentType]
         max_attempts = int(job.opts.get("attempts", 1))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
         try:
-            result = handle(str(data["kind"]), dict(data.get("input") or {}))
+            # Stats and reports are CPU-bound; a thread keeps the event loop (and health checks) responsive.
+            result = await asyncio.to_thread(handle, str(data["kind"]), dict(data.get("input") or {}))
         except Exception as e:
             log("error", "job failed", job_id=job_id, error=str(e), attempt=attempts)
-            if attempts >= max_attempts:
+            # Input that can never succeed fails now instead of being retried with backoff.
+            if attempts >= max_attempts or isinstance(e, BadJobInput):
                 body = {"status": "failed", "error": str(e)[:4000], "attempts": attempts}
                 await asyncio.to_thread(post_result, http, env.WEB_INTERNAL_URL, env.INTERNAL_HMAC_KEY, job_id, body)
             raise

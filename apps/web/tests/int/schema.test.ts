@@ -22,7 +22,7 @@ const attempt = (source: "browser" | "runner", status: "practice" | "passed") =>
 describe("migrations on MySQL 8.4", () => {
   it("creates every app table", async () => {
     const [rows] = await db.execute(sql`SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name <> '__drizzle_migrations'`);
-    expect(Number((rows as unknown as { n: number }[])[0]!.n)).toBe(50);
+    expect(Number((rows as unknown as { n: number }[])[0]!.n)).toBe(51);
   });
   it("innodb_ft_min_token_size is 2", async () => {
     const [rows] = await db.execute(sql`SELECT @@innodb_ft_min_token_size AS v`);

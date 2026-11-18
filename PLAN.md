@@ -1,6 +1,6 @@
 # PLAN.md — Systems Atlas
 
-Status: **P0 done (PR #1) and P1 done (PR #2), both awaiting merge; D-40…D-51 approved 2026-11-17. P2 in progress; it starts with the Node 24 move (D-52, its own PR).** Progress and test results: `PROGRESS.md`.
+Status: **P0 (PR #1), P1 (PR #2) and the Node 24 move (PR #3, D-52) await merge. P2 Lab done on branch `p2-lab` (2026-11-18), awaiting review; decisions D-53…D-66 below.** Progress and test results: `PROGRESS.md`.
 
 Authoritative spec: `docs/spec/G_claude_code_prompt.md` (wins on conflict). Supporting: `docs/spec/{A..F,H}_*.md`, `docs/spec/SOURCES.md`. This plan references those files by section instead of restating them.
 
@@ -335,6 +335,8 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 | Q25 | Lessons for weeks 4-24: the curriculum, gates and rubrics are all in `content/`, but lesson text exists only for weeks 1-3 (Q12). Write the next lessons per phase as weeks become reachable, or batch them? | Q12 | **Resolved 2026-11-17:** W4-W8 next, and lessons always stay at least one week ahead of what the learner can reach. `q-w04` now; `q-w20-exam` later |
 | Q26 | ts-fsrs 6 and newer tools want Node 24. Move the stack to Node 24 (images, CI, `engines`) during P2? | D-41 | **Resolved 2026-11-17:** yes, at the start of P2, its own small PR (D-52) |
 | Q24 | Refreshing a GitHub user-to-server token is also a `POST` to `https://github.com/login/oauth/access_token` (`grant_type=refresh_token`). I treat "the OAuth token exchange" as covering both code exchange and refresh at that one endpoint, both in `modules/auth`. OK? | AT-27 reworded | Yes |
+| ● Q27 | Gate bundles for weeks 2-8 need real graders: CS:APP/xv6 lab graders, Maelstrom checks, BusTub tests. Those come from course repos with their own licences and rules (15-445 asks students not to publish solutions). Proposal: atlas-lab runs the official graders from **your own clone** of each course repo, pinned by commit, inside the same `--network none` container, and uploads only pass/fail per test; Systems Atlas never redistributes their code. OK? | D-60 | Recommended: yes. Until then W2-W8 code gates stay "hidden tests not published yet" |
+| ● Q28 | atlas-lab distribution: install from this repo (`uv tool install ./cli/atlas-lab`) or publish it to PyPI? Publishing is an outward action. | D-61 | Recommended: install from the repo in v1; no PyPI |
 
 ---
 
@@ -412,6 +414,25 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 | D-50 | CI runs the Python checks on 3.12 (`uv sync --python 3.12`), matching the Docker images, instead of the runner's default | consistency |
 | D-51 | The diagnostic's code task asks the learner to report the practice-check outcome; it shapes the skill map only and can never skip a week | D-15, Q23 |
 | D-52 | Node 24 everywhere (`node:24-alpine` images, CI `node-version: 24`, `engines >=24.0.0`, `@types/node` 24.19.2) and **ts-fsrs 6.0.0**, superseding D-41. ts-fsrs 6 dropped `elapsed_days`, so we compute whole days since the previous review ourselves; cards stored under 5.x load unchanged (extra fields are dropped) | Q26 approved |
+
+### Decisions made during P2 (for review)
+
+| ID | Decision | Why |
+|---|---|---|
+| D-53 | Uploads must carry raw samples for every metric; a client `summary` is accepted only for audit (`client_summary_json`) and never shown as truth | AT-15; a summary-only metric could not be recomputed |
+| D-54 | The upload contracts are Zod schemas in `modules/research/internal/contract.ts`; `packages/contracts/schemas/{benchmark,gate-result}.schema.json` are **generated** (`pnpm contracts:gen`) and a unit test fails on drift. Canonical JSON = sorted keys with JavaScript number formatting; atlas-lab implements the same rules and both check `canonical-json.vectors.json` | one source of truth across TS and Python |
+| D-55 | **numpy 2.5.5** (approved 2026-11-18) in `atlas_common.stats`: percentiles (numpy "linear"), percentile bootstrap with 2,000 resamples at a fixed seed (20261116), Mann-Whitney U (normal approximation, tie- and continuity-corrected). Above 100,000 samples the bootstrap uses a seeded subsample, reported as `basis_n` | speed (a summary at the 100k cap takes about 4 s) with honest labelling |
+| D-56 | At upload the web app computes the core summary itself (n, mean, stdev, min, max, p25/p50/p75/p95/p99), mirroring numpy exactly (fixture test), then queues `stats.summarize` on worker-py for CIs, histogram and CDF (`ci_status` pending → done/failed). Compare calls api-py synchronously (30 s timeout) and falls back to stored summaries with a degraded banner | AT-15 needs numbers at upload; AT-47 |
+| D-57 | Uploads are refused until the project is pre-registered (F.5). The pre-registration and hypothesis are immutable once saved; later changes are amendments appended to `plan_md` with an ISO timestamp | F.5 "pre-register before running" |
+| D-58 | Reports are rendered by worker-py from structured data into escaped Markdown and HTML (no user markup survives). A percentage claim appears only against the pre-registered baseline config, in the same environment fingerprint, with a CI that excludes zero; failed runs are always listed. Stored in the new `project_reports` table; downloads are attachments with `CSP: default-src 'none'; sandbox` | F.5, D-20, Q13 |
+| D-59 | Runner tokens: `atl_` + 32 random bytes (base64url), SHA-256 stored, scopes `results:write` / `tests:read`, 1-90 days, revocable, bearer header only (cookies ignored on runner routes). Uploads rate-limited in Redis (60 per 10 min per user, 120 per 10 min per token; fails closed with 503) | AT-18, T-R1, T-A7 |
+| D-60 | Gate test bundles live in `content/gate-tests/<id>@<version>/` (manifest, harness, hidden tests, canary). The image is pinned by digest; the bundle hash covers manifest and files. The server accepts a gate result only for the current hash and exactly the listed tests, then records `runner_result` evidence. P2 publishes the W1 bundle; other weeks show "hidden tests not published yet" (Q27) | D-15, X-06, T-C2 |
+| D-61 | atlas-lab uses Typer + httpx (listed in the spec) and the standard library for notebooks (nbformat v4 JSON; nbformat not added). The token is read only from a hidden prompt or stdin. The auto-shutdown script is written, never run. Benchmarks report samples via `ATLAS_METRIC <name> <unit> <value>` lines or `$ATLAS_LAB_OUT` JSON | T-R4, T-R6, fewer dependencies |
+| D-62 | Sample data is one `is_mock` project seeded deterministically (12 runs incl. a warm-up and a failed run) when the Settings toggle is on; turning it off deletes it | FR-30, Q17 |
+| D-63 | `project_reports` table and `runs.command` column added (migration 0003; DATA_MODEL §9 #23) | reports need storage; F.6 "exact command" |
+| D-64 | Apache **ECharts 6.1.0** (spec-listed) loaded lazily; every chart is `aria-hidden` next to a text summary and a data table; series differ by dash pattern as well as colour | E.1, R-10 |
+| D-65 | The services image installs only `api-py` and `worker-py` (`uv sync --package`); atlas-lab is a workspace member but not part of any image | smaller images |
+| D-66 | Two Shiki GitHub-theme colours that fail 4.5:1 are replaced (`#e36209`→`#b45000` light, `#6a737d`→`#57606a` light / `#9ea7b3` dark) | AT-13 (found by axe on the W5 lesson) |
 
 ---
 
