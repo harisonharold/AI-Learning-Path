@@ -1,0 +1,35 @@
+## Objectives
+
+- Write concurrent Go with goroutines, channels, `select` and the `sync` package, and test it with `-race`.
+- Implement Maelstrom nodes for Gossip Glomers challenges 1-3: echo, unique IDs, broadcast.
+- Solve timed data-structure problems and state their complexity.
+
+## Go concurrency
+
+A **goroutine** is a function running concurrently, scheduled by the Go runtime onto OS threads. An **unbuffered channel** is a rendezvous: a send blocks until a receiver takes the value. A buffered channel blocks only when full. `select` waits on several channel operations at once. Shared maps still need a `sync.Mutex`; a `sync.WaitGroup` waits for a group of goroutines. Run tests with `go test -race`: the race detector is built on ThreadSanitizer.
+
+## Maelstrom and Gossip Glomers
+
+```mermaid
+sequenceDiagram
+  participant M as Maelstrom
+  participant N as your node (n1)
+  M->>N: stdin {"src":"c1","dest":"n1","body":{"type":"init","node_id":"n1","node_ids":["n1","n2","n3"],"msg_id":1}}
+  N->>M: stdout {"src":"n1","dest":"c1","body":{"type":"init_ok","in_reply_to":1}}
+  M->>N: {"body":{"type":"echo","echo":"hi","msg_id":2}}
+  N->>M: {"body":{"type":"echo_ok","echo":"hi","in_reply_to":2}}
+```
+
+Maelstrom runs your nodes as processes and talks to them with JSON messages: one per line on stdin and stdout, with logs on stderr. It injects faults such as network partitions and checks the history against each challenge's rules.
+
+- **Echo**: reply with the same payload.
+- **Unique IDs**: generate globally unique IDs while partitioned, so no coordination is possible. Combine the node ID with a local counter.
+- **Broadcast**: gossip values to neighbours until every node has seen every value, efficiently and despite partitions.
+
+## Timed problems
+
+Six timed problems cover hash maps, heaps, BFS/DFS and binary search. Write the complexity before you write code.
+
+## This week's gate
+
+The Maelstrom checks for challenges 1-3 and the timed problems run through atlas-lab.
