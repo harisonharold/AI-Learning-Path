@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import pytest
 from api_py.app import Env, create_app
 from atlas_common.hmac_sig import sign_request
 from fastapi.testclient import TestClient
@@ -35,8 +36,11 @@ def test_at21_compare_over_http_matches_the_fixed_seed_fixture() -> None:
     r = call("/stats/compare", f["input"])
     assert r.status_code == 200
     got = r.json()
+    # Bootstrap results are exact for a seed; the normal-approximation p-value may differ in the last bit across libm
+    # builds (erfc), so floats compare to 1e-9 relative.
     assert got["diff"]["p50"]["ci95"] == f["expected"]["diff"]["p50"]["ci95"]
-    assert got["mann_whitney"] == f["expected"]["mann_whitney"]
+    for k, v in f["expected"]["mann_whitney"].items():
+        assert got["mann_whitney"][k] == (pytest.approx(v, rel=1e-9) if isinstance(v, float) else v)
 
 
 def test_summary_route() -> None:
