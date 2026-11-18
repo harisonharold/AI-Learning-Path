@@ -5,6 +5,8 @@ import { mockRequests, mockReset, signIn, sql } from "../support/stack.ts";
 test("X-14: deleting the account removes all rows, makes no GitHub call, and shows revoke-by-hand steps", async ({ page }) => {
   await signIn(page);
   await mockReset();
+  // Audit rows outlive the user by design, so count the delete this test adds rather than assuming an empty log.
+  const deletesBefore = Number(sql("SELECT COUNT(*) FROM audit_log WHERE action='account.delete'")[0]);
   await page.goto("/settings");
   await page.getByLabel("Type DELETE MY ACCOUNT to confirm").fill("DELETE MY ACCOUNT");
   await page.getByRole("button", { name: "Delete my account" }).click();
@@ -16,6 +18,6 @@ test("X-14: deleting the account removes all rows, makes no GitHub call, and sho
   expect(await mockRequests()).toEqual([]);
   expect(sql("SELECT COUNT(*) FROM `user`")).toEqual(["0"]);
   expect(sql("SELECT COUNT(*) FROM jobs")).toEqual(["0"]);
-  expect(sql("SELECT action FROM audit_log WHERE action='account.delete'")).toEqual(["account.delete"]);
+  expect(Number(sql("SELECT COUNT(*) FROM audit_log WHERE action='account.delete'")[0])).toBe(deletesBefore + 1);
   expect((await page.request.get("/api/me")).status()).toBe(401);
 });

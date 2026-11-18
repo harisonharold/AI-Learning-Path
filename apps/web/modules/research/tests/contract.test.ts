@@ -42,6 +42,15 @@ describe("AT-16: upload validation", () => {
     bad({ metrics: [{ ...(m as object), samples: [1, Number.NaN] }] }, "metrics.0.samples.1");
     expect(BenchmarkUpload.safeParse({ ...v, status: "failed", failure_note: "OOM", metrics: [] }).success).toBe(true);
   });
+  it("T-R3: deeply nested or huge configs are refused before any recursive processing", () => {
+    const v = read("fixtures/benchmark.valid.json") as Record<string, unknown>;
+    let deep: Record<string, unknown> = { leaf: 1 };
+    for (let i = 0; i < 5000; i++) deep = { n: deep };
+    const r = BenchmarkUpload.safeParse({ ...v, config: deep });
+    expect(r.success).toBe(false);
+    expect(r.error!.issues.some((i) => i.path.join(".") === "config")).toBe(true);
+    expect(BenchmarkUpload.safeParse({ ...v, config: { blob: "x".repeat(70_000) } }).success).toBe(false);
+  });
   it("a gate result must declare network none", () => {
     const g = read("fixtures/gate-result.valid.json");
     expect(GateResultUpload.safeParse({ ...g, docker: { image_digest: `sha256:${"a".repeat(64)}`, network: "bridge" } }).success).toBe(false);

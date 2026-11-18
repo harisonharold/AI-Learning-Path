@@ -18,6 +18,22 @@ const shortText = (max: number) => z.string().min(1).max(max);
 const isoDate = z.iso.datetime({ offset: true });
 const finite = z.number().refine(Number.isFinite, "must be a finite number");
 
+export const MAX_CONFIG_DEPTH = 8;
+export const MAX_CONFIG_BYTES = 64 * 1024;
+/** Nesting depth of a JSON value (THREAT T-R3: deep nesting would exhaust the stack in recursive code). */
+export function jsonDepth(v: unknown, limit = MAX_CONFIG_DEPTH + 1): number {
+  if (v === null || typeof v !== "object") return 0;
+  if (limit <= 0) return Infinity;
+  let d = 0;
+  for (const x of Array.isArray(v) ? v : Object.values(v as Record<string, unknown>)) d = Math.max(d, jsonDepth(x, limit - 1));
+  return d + 1;
+}
+const Config = z.record(z.string().max(200), z.unknown()).superRefine((c, ctx) => {
+  // Depth first: the size check serialises the value, which must not run on pathological nesting.
+  if (jsonDepth(c) > MAX_CONFIG_DEPTH) ctx.addIssue({ code: "custom", message: `nested more than ${MAX_CONFIG_DEPTH} levels` });
+  else if (JSON.stringify(c).length > MAX_CONFIG_BYTES) ctx.addIssue({ code: "custom", message: "larger than 64 KB" });
+});
+
 export const Env = z
   .object({
     cpu: shortText(200),
@@ -54,7 +70,7 @@ export const BenchmarkUpload = z
     schema_version: z.literal("1"),
     project_id: z.number().int().positive(),
     config_name: shortText(200),
-    config: z.record(z.string(), z.unknown()),
+    config: Config,
     config_hash: hex64,
     env: Env,
     metrics: z.array(Metric).max(32),

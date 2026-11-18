@@ -1,5 +1,112 @@
 # PROGRESS.md
 
+## 2026-11-18 — P2 Lab (finished on branch `p2-lab`; awaiting review)
+
+### Built
+- **Node 24 + ts-fsrs 6 (D-52):** its own PR (#3), stacked on P1. ts-fsrs 6 dropped `elapsed_days`, so we compute it; cards stored under 5.x still load.
+- **Upload contracts (D-53, D-54):**
+  - Zod is the single source; `packages/contracts/schemas/benchmark.schema.json` and `gate-result.schema.json` are generated from it and a test fails on drift.
+  - Fixtures cover valid and invalid uploads, gate results and canonical JSON. Canonical JSON uses JavaScript number formatting, identical in TypeScript and Python (checked on 8,000+ random doubles and in the shared vectors).
+- **Stats engine (D-55, numpy approved):**
+  - Percentiles; seeded percentile bootstrap for p50/p95/p99/mean; histogram; CDF.
+  - Compare (bootstrap CI of B−A and of the relative change, Mann-Whitney U).
+  - api-py serves `/stats/summary`, `/stats/compare` and `/reports/render` over HMAC; worker-py runs the `stats.summarize` and `report.render` jobs.
+- **Research module:**
+  - Projects with **immutable pre-registration** and timestamped amendments (D-57).
+  - Configs deduplicated by canonical hash; runs uploaded from the browser or by atlas-lab (≤ 20 MB, stream-checked, `config` depth and size limits, rate-limited in Redis).
+  - The server recomputes every summary with numpy-identical percentiles; the client summary is kept for audit only (D-56). Samples go to the DB up to 100k per metric, overflow to gzip files (deleted with the account).
+  - Environment fingerprints; compare with confounder warnings and config/env diffs; degrades to stored summaries when api-py is down.
+- **Report generator (D-58):** escaped Markdown and HTML with the F.5 claim rule (percentage only against the pre-registered baseline, same environment, CI excluding zero). Failed runs are always listed, with reproduce commands. Downloads are sandboxed attachments. New `project_reports` table (migration 0003).
+- **Runner tokens (D-59):** shown once, SHA-256 stored, scoped (`results:write`, `tests:read`), 1-90 days, revocable, last use recorded, bearer-only.
+- **Gate test bundles (D-60):** `content/gate-tests/w01@1` has a digest-pinned image, a stdlib harness, 8 hidden tests and a canary. A verified atlas-lab result becomes `runner_result` evidence, so **code-test gates can now pass** (closes the D-45 limit for W1).
+- **atlas-lab CLI (D-61):**
+  - `login --token` (hidden prompt, 0600 file, redaction), `env`, `upload`, and `notebook export|import` (nbformat v4 via the standard library).
+  - `run <exercise>` runs hidden tests in Docker (`--network none`, read-only, no capabilities, nobody user, limits).
+  - `run <experiment> -- cmd` handles repetitions, warm-ups, timeouts, `--max-hours`, GPU sampling via nvidia-smi and failed runs.
+  - `--dry-run` prints the environment and the cost pre-flight. It writes a shutdown script and never runs it.
+- **Pages:**
+  - `/research/projects` and the project workspace (Hypothesis · Plan · Configs · Runs · Compare · Failures · Reproducibility · Report). The baseline is pinned; the report button explains why it's disabled.
+  - `/analytics/benchmarks`: ECharts CDF, histogram, box plot, throughput, memory and GPU timeline, each with a text summary and a data table; percentile CI table; bootstrap differences; config/env diff with confounder warnings; degraded banner.
+  - Settings: runner tokens and the sample-data toggle.
+- **Sample data (D-62):** one `is_mock` project behind the Settings toggle, with the SAMPLE DATA banner. It is never reportable and never counted.
+- **Content (Q25):** lessons for weeks 4-8 with 75 review cards and the `q-w04` virtual-memory quiz. Eight new sources come from SOURCES.md (checked 2026-11-16). Four (RFC 9112, epoll(7), flame graphs, Go diagnostics) were unreachable from here and are stored as **unverified** (shown with the Unverified badge).
+
+### Tested (local on Node 24, 2026-11-18; CI on the branch: see below)
+| Suite | Result |
+|---|---|
+| Lint (boundaries included) / strict typecheck | clean |
+| Web unit | 194 passed (18 files) |
+| UI contrast / worker-node | 71 / 2 passed |
+| Integration (Testcontainers MySQL 8.4 + Redis 7) | 121 passed |
+| Python: services + atlas-lab (ruff, ruff format, pyright strict, pytest) | clean; 68 + 40 = 108 passed, incl. a real Docker gate run |
+| Playwright | 93 passed, 0 skipped: 33 e2e + 60 axe (sign-in, 26 pages and 3 project tabs, in both themes) |
+| AT-01 compose smoke | pass |
+| AT-03 + X-06 bundle scan | 0 findings in `.next/static` (131 files) and the sandbox files; 11 canaries incl. the hidden-test canary |
+| X-02 Caddy edge / forbidden strings | 9/9 / pass |
+
+Acceptance tests covered in P2:
+- **AT-15:**
+  - `research.test.ts`: server p50/p95/p99 equal the TS summary of the samples, and the client summary (p50 = 1) is ignored.
+  - `contract.test.ts`: the TS summary equals the numpy fixture exactly.
+  - e2e: the browser upload shows the server's 12.25 ms.
+- **AT-16:**
+  - Integration: the invalid fixture returns 422 listing `schema_version`, `config_hash`, `env.git_sha`, `metrics.0.name` and `metrics.0.samples`; a config-hash mismatch is a field error; non-JSON returns 422; 21 MB returns 413.
+  - The same fixture fails the generated JSON Schema in Python.
+- **AT-17:** `test_dry_run.py` checks env fields without a GPU, GPU fields from a stand-in `nvidia-smi`, cost from `--gpu-rate` × `--max-hours` or from the timeouts, and a warning when there is no limit.
+- **AT-18:**
+  - Integration: a results:write token uploads; a revoked or expired token gets 401; a missing scope gets 403; a cookie alone gets 401; only the hash and prefix are stored; tokens are capped at 90 days.
+  - e2e: the token is shown once, then only by prefix, and works for `atlas-lab login`.
+- **AT-19:**
+  - `report-gate.test.ts` covers each reason.
+  - Integration: 409 with reasons until a baseline and enough non-warm-up runs exist, then 202 and a job whose run set includes the failed run.
+  - e2e: the downloaded report states the change against the baseline with a CI and lists the failed run's note.
+- **AT-20:**
+  - Integration: off by default; the toggle creates 12 `is_mock` runs; the project is never reportable; meters are unchanged; turning it off deletes it.
+  - e2e: SAMPLE DATA banner on the project and analytics pages.
+- **AT-21:**
+  - The fixed-seed fixture is reproduced exactly in-process and over HTTP; floats compare to 1e-9 across Python builds.
+  - The web compare signs its call and passes the fixture through (integration test with a signature-checking stub).
+- **AT-47:**
+  - Integration: compare returns `degraded: true` with stored summaries.
+  - e2e: `api-py` is stopped, the analytics page shows the banner and the stored percentiles, and the banner clears after a restart.
+- **Gate evidence end to end (e2e):**
+  - The real `atlas-lab run ex-w01-log-levels` runs 8/8 hidden tests in Docker with no network and records `runner_result` on g-w01.
+  - Tampered hashes and wrong test lists are refused (integration).
+  - A learner socket call fails inside the container (pytest, Docker).
+- **AT-04:** the route manifest covers all 39 routes; the cross-user matrix adds project, run, report and runner token.
+
+### Failed, then fixed during P2 (not hidden)
+- **CI found a last-bit float difference:** the Mann-Whitney p-value from `erfc` differed in the 17th digit on the runner's Python 3.12 build. The route test now compares to 1e-9, as the stats test already did.
+- **Axe found three contrast or target problems:**
+  - The per-run "JSON" links were smaller than 24×24 px.
+  - Shiki's GitHub themes colour C comments and parameters below 4.5:1 (first seen on the W5 lesson, which has the first code comments); the colours are now replaced (D-66).
+- **A JSON nesting attack crashed validation:** a 5,000-level `config` overflowed the stack inside Zod's refinements. Depth is now checked first, by a bounded function, before anything serialises the value.
+- **Service image build broke:** the new atlas-lab workspace member was missing from the image context; the image now installs only api-py and worker-py (D-65).
+- **Report Markdown was over-escaped:** `warm\-up`, `2026\-11\-18`. It now escapes only what forms Markdown syntax, with a test that link syntax stays dead.
+- **Hidden skips:** in a full run the axe project-tab checks were *skipped* (6 tests), not passed, because the account-delete e2e test runs first and removes the project. They now create their own project. The account-delete test also stopped assuming an empty audit log (audit rows outlive the user by design).
+- **Smaller fixes:**
+  - `docker pull` contacted the registry even when the digest-pinned image was local; atlas-lab now pulls only if the image is missing, which also lets it work offline.
+  - The sample-data checkbox only changed after the server answered; it now updates right away and reverts on error.
+
+### Not done / limits (honest)
+- **Only the W1 gate bundle exists.** Weeks 2-8 show "hidden tests not published yet" and need course graders (Q27).
+- **Large runs (RR12):** runs above 100k samples per metric keep the first 100k in the database for compare and reports; the summary at upload uses all samples.
+- **Compare speed:** it is synchronous with a 30 s timeout. Typical runs (≤ 10k samples) take under a second; 100k-sample runs take about 7 s.
+- **Docker test skipped in the Python CI job:** the gate image isn't pulled there. The e2e job runs a real Docker gate.
+- **Hidden tests readable by token (RR11):** a `tests:read` token can read the hidden tests.
+- **Unverified sources:** four lesson sources stay unverified until the P3-core verification job runs.
+- **Node 20 actions:** CI still warns about Node 20 actions (tracked).
+
+### Mock data
+- **In the product:** only the sample-data project, off by default, labelled SAMPLE DATA and excluded everywhere.
+- **Test-only:** the mock GitHub OAuth server, labelled DB fixtures, and an HTTP stub for api-py in one integration test.
+
+### What I need from you
+1. Review of PR #3 (Node 24) and of the P2 PR.
+2. Decisions **D-53…D-66** (PLAN §9), especially D-56 (sync compare, async CIs), D-57 (no uploads before pre-registration), D-60 (gate bundles) and D-61 (atlas-lab design).
+3. **Q27:** run official course graders from your own clone. **Q28:** install atlas-lab from the repo, not PyPI.
+4. "Go" for P3-core.
+
 ## 2026-11-17 — P1 Learning core (finished on branch `p1-learning-core`; awaiting review)
 
 ### Built
