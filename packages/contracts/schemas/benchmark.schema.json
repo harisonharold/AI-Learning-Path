@@ -1,0 +1,298 @@
+{
+  "$id": "https://systems-atlas.local/schemas/benchmark.schema.json",
+  "title": "Benchmark run upload (FR-13); POST /api/projects/:id/runs, or /api/runner/results with kind=benchmark",
+  "$comment": "Generated from apps/web/modules/research/internal/contract.ts. Also enforced server-side: numbers finite; an ok run has >= 1 metric; a failed run has a failure_note; ended_at >= started_at; metric names unique; config_hash = sha256(canonical JSON of config); the server recomputes every summary from samples.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "project_id": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "config_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "config": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    },
+    "config_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "env": {
+      "type": "object",
+      "properties": {
+        "cpu": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "cpu_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "memory_mb": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "os": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "python": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "libs": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "git_sha": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "git_dirty": {
+          "type": "boolean"
+        },
+        "container_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gpu": {
+          "maxItems": 16,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "memory_mb": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "driver": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 50
+              },
+              "cuda": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "memory_mb",
+              "driver",
+              "cuda"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "gpu_topology": {
+          "type": "string",
+          "maxLength": 20000
+        }
+      },
+      "required": [
+        "cpu",
+        "cpu_count",
+        "os",
+        "python",
+        "libs",
+        "git_sha",
+        "container_digest",
+        "gpu"
+      ],
+      "additionalProperties": false
+    },
+    "metrics": {
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.]{0,63}$"
+          },
+          "unit": {
+            "type": "string",
+            "pattern": "^[A-Za-z%/]{1,16}$"
+          },
+          "samples": {
+            "minItems": 1,
+            "maxItems": 1000000,
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "p50": {
+                "type": "number"
+              },
+              "p95": {
+                "type": "number"
+              },
+              "p99": {
+                "type": "number"
+              },
+              "mean": {
+                "type": "number"
+              },
+              "n": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "p50",
+              "p95",
+              "p99",
+              "mean",
+              "n"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "name",
+          "unit",
+          "samples"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "gpu_timeline": {
+      "maxItems": 200000,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "t_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "util_pct": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "mem_mb": {
+            "type": "number",
+            "minimum": 0
+          },
+          "power_w": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "t_ms",
+          "util_pct",
+          "mem_mb"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "failed"
+      ]
+    },
+    "failure_note": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "is_baseline": {
+      "default": false,
+      "type": "boolean"
+    },
+    "is_warmup": {
+      "default": false,
+      "type": "boolean"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "command": {
+      "type": "string",
+      "maxLength": 2000
+    }
+  },
+  "required": [
+    "schema_version",
+    "project_id",
+    "config_name",
+    "config",
+    "config_hash",
+    "env",
+    "metrics",
+    "status",
+    "started_at",
+    "ended_at"
+  ],
+  "additionalProperties": false
+}

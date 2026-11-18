@@ -1,0 +1,59 @@
+{
+ "schema_version": "1",
+ "project_id": 1,
+ "config_name": "batch=8",
+ "config": {
+  "batch_size": 8,
+  "model": "tiny-llm",
+  "threads": 4,
+  "warmup_requests": 50
+ },
+ "config_hash": "ee1dfe4566a3bd86210fd94f24988fa4423491d820be500ba3e00134d9575751",
+ "env": {
+  "cpu": "AMD EPYC 7B13",
+  "cpu_count": 8,
+  "memory_mb": 32768,
+  "os": "Linux 6.8 x86_64",
+  "python": "3.12.7",
+  "libs": {
+   "numpy": "2.5.5",
+   "torch": "2.9.1"
+  },
+  "git_sha": "0123456789abcdef0123456789abcdef01234567",
+  "git_dirty": false,
+  "container_digest": null,
+  "gpu": []
+ },
+ "metrics": [
+  {
+   "name": "latency_ms",
+   "unit": "ms",
+   "samples": [
+    12.1,
+    11.8,
+    12.5,
+    13,
+    12.2,
+    11.9,
+    30.4,
+    12,
+    12.3,
+    12.6
+   ],
+   "summary": {
+    "p50": 1,
+    "p95": 2,
+    "p99": 3,
+    "mean": 1,
+    "n": 10
+   }
+  }
+ ],
+ "gpu_timeline": [],
+ "status": "ok",
+ "is_baseline": false,
+ "is_warmup": false,
+ "started_at": "2026-11-18T10:00:00Z",
+ "ended_at": "2026-11-18T10:01:00Z",
+ "command": "atlas-lab run bench.py --repeat 5"
+}

@@ -1,0 +1,50 @@
+[
+ {
+  "input": {},
+  "canonical": "{}",
+  "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+ },
+ {
+  "input": {
+   "b": 1,
+   "a": [
+    3,
+    {
+     "d": null,
+     "c": "x"
+    }
+   ]
+  },
+  "canonical": "{\"a\":[3,{\"c\":\"x\",\"d\":null}],\"b\":1}",
+  "sha256": "b4a92c330fc01410911e683d5d03404eb28981a6e1d67f9cb1ae63ddc3d19947"
+ },
+ {
+  "input": {
+   "lr": 0.1,
+   "steps": 1000,
+   "ratio": 1.5,
+   "big": 1e+21,
+   "tiny": 1e-7,
+   "neg": 0,
+   "f": 2
+  },
+  "canonical": "{\"big\":1e+21,\"f\":2,\"lr\":0.1,\"neg\":0,\"ratio\":1.5,\"steps\":1000,\"tiny\":1e-7}",
+  "sha256": "04a77447d2d01136144c48bea4a2ac71b1aef4ebe3f927ce3694dffb67210eb2"
+ },
+ {
+  "input": {
+   "unicode": "é \"\\"
+  },
+  "canonical": "{\"unicode\":\"é \\\"\\\\\"}",
+  "sha256": "95225bddd5afadd554bab77a54966acc10b54ec9618ca3efda435372c0c65cb7"
+ },
+ {
+  "input": [
+   true,
+   false,
+   null
+  ],
+  "canonical": "[true,false,null]",
+  "sha256": "4d0f18de2133118249c26acc481838d4f6bb6bc1de882d99abbd19ae9397e8df"
+ }
+]

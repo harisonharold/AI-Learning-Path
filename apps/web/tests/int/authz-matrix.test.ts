@@ -3,7 +3,8 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { attempts, cards } from "../../db/schema/index.ts";
+import { attempts, cards, projectReports, projects, runConfigs, runs } from "../../db/schema/index.ts";
+import { createRunnerToken } from "../../modules/platform/internal/runner-tokens.ts";
 import { addLessonCards, seed } from "../../modules/learning/service.ts";
 import { closeQueues, enqueueJob } from "../../modules/platform/internal/jobs-repo.ts";
 import { ROUTES } from "../../modules/platform/route-manifest.ts";
@@ -33,6 +34,14 @@ beforeAll(async () => {
   ownedOfB.card = String((await db.select({ id: cards.id }).from(cards).where(eq(cards.userId, b.id)).limit(1))[0]!.id);
   const [att] = await db.insert(attempts).values({ userId: b.id, gateId: "g-w02", source: "manual", status: "pending_evidence", contentVersion: "t" }).$returningId();
   ownedOfB.attempt = String(att!.id);
+  const [proj] = await db.insert(projects).values({ userId: b.id, title: "b's project" }).$returningId();
+  ownedOfB.project = String(proj!.id);
+  const [cfg] = await db.insert(runConfigs).values({ projectId: proj!.id, name: "c", configJson: {}, configHash: "0".repeat(64) }).$returningId();
+  const [run] = await db.insert(runs).values({ projectId: proj!.id, configId: cfg!.id, envJson: {}, envFingerprint: "0".repeat(64), status: "ok", source: "upload" }).$returningId();
+  ownedOfB.run = String(run!.id);
+  const [rep] = await db.insert(projectReports).values({ projectId: proj!.id, userId: b.id, jobId: "00000000-0000-0000-0000-00000000000b", status: "done", markdown: "# b's job", html: "<p>b</p>", runIds: [run!.id] }).$returningId();
+  ownedOfB.report = String(rep!.id);
+  ownedOfB.runner_token = String((await createRunnerToken(b.id, ["results:write"], 30)).id);
 });
 afterAll(async () => { await closeQueues(); });
 

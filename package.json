@@ -20,7 +20,8 @@
     "py:test": "uv run pytest",
     "up": "sh infra/scripts/gen-env.sh && docker compose --env-file .env -f infra/compose/compose.yaml up -d --build --wait",
     "down": "docker compose --env-file .env -f infra/compose/compose.yaml down",
-    "up:test": "sh infra/scripts/gen-env.sh && docker compose --env-file .env -f infra/compose/compose.yaml -f infra/compose/compose.test.yaml up -d --build --wait"
+    "up:test": "sh infra/scripts/gen-env.sh && docker compose --env-file .env -f infra/compose/compose.yaml -f infra/compose/compose.test.yaml up -d --build --wait",
+    "contracts:gen": "node apps/web/scripts/gen-contracts.ts"
   },
   "type": "module",
   "devDependencies": {

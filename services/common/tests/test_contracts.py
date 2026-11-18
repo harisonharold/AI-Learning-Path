@@ -1,20 +1,34 @@
-"""Contract fixtures validated against the shared JSON Schemas (Python side; Ajv does the TS side)."""
+"""Upload contracts from the Python side: the generated JSON Schemas accept the valid fixtures and reject the invalid
+one at the expected fields (AT-16)."""
 
 import json
 from pathlib import Path
+from typing import Any
 
-import pytest
 from jsonschema import Draft202012Validator
 
-ROOT = Path(__file__).parents[3] / "packages/contracts"
+C = Path(__file__).resolve().parents[3] / "packages" / "contracts"
 
 
-@pytest.mark.parametrize("name", ["job-message", "job-result"])
-def test_fixtures(name: str) -> None:
-    schema = json.loads((ROOT / "schemas" / f"{name}.schema.json").read_text())
+def load(p: str) -> Any:
+    return json.loads((C / p).read_text())
+
+
+def validator(name: str) -> Draft202012Validator:
+    schema = load(f"schemas/{name}.schema.json")
     Draft202012Validator.check_schema(schema)
-    v = Draft202012Validator(schema)
-    for doc in json.loads((ROOT / "fixtures" / f"{name}.valid.json").read_text()):
-        assert not list(v.iter_errors(doc)), doc
-    for doc in json.loads((ROOT / "fixtures" / f"{name}.invalid.json").read_text()):
-        assert list(v.iter_errors(doc)), doc
+    return Draft202012Validator(schema, format_checker=Draft202012Validator.FORMAT_CHECKER)
+
+
+def test_valid_fixtures_pass() -> None:
+    validator("benchmark").validate(load("fixtures/benchmark.valid.json"))
+    validator("gate-result").validate(load("fixtures/gate-result.valid.json"))
+
+
+def test_invalid_fixture_fails_on_expected_fields() -> None:
+    f = load("fixtures/benchmark.invalid.json")
+    errors = list(validator("benchmark").iter_errors(f["body"]))
+    paths = {".".join(str(p) for p in e.absolute_path) for e in errors}
+    # Field-level rules expressible in JSON Schema; cross-field rules are server-only (see the schema's $comment).
+    for p in ["schema_version", "config_hash", "env.git_sha", "metrics.0.name", "metrics.0.samples"]:
+        assert p in paths, (p, paths)

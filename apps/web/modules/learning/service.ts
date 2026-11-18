@@ -37,7 +37,7 @@ export async function settings(userId: string) {
   const s = await repo.getSettings(userId);
   return { ...s, mode: s.mode ?? DEFAULTS.mode, hoursPerWeek: s.hoursPerWeek ?? DEFAULTS.hoursPerWeek, configured: s.mode !== null };
 }
-export async function updateSettings(userId: string, s: { mode?: "RI" | "ACC"; hoursPerWeek?: number; timezone?: string }) {
+export async function updateSettings(userId: string, s: { mode?: "RI" | "ACC"; hoursPerWeek?: number; timezone?: string; sampleData?: boolean }) {
   await repo.putSettings(userId, s);
   return settings(userId);
 }
@@ -128,7 +128,7 @@ export async function gate(userId: string, gateId: string) {
     remediation: rem ? { reattemptAfter: rem.reattemptAfter } : null, noAiCode: f.week.no_ai_code, publishRestricted: f.week.publish_restricted, restrictionNote: f.week.restriction_note ?? null };
 }
 
-async function writableAttempt(userId: string, gateId: string, source: "manual" | "server" | "diagnostic" = "manual") {
+async function writableAttempt(userId: string, gateId: string, source: "manual" | "server" | "diagnostic" | "runner" = "manual") {
   const f = findGate(gateId);
   if (!f) throw new LearningError("NOT_FOUND", "Gate not found.");
   const g = await gate(userId, gateId);
@@ -160,6 +160,51 @@ export async function submitQuiz(userId: string, gateId: string, quizId: string,
   await repo.addEvidence(attemptId, { kind: "server_graded", quiz: quizId, passed: result.passed, verified: true, method: `server-graded ${result.correct}/${result.total}` });
   const settled = await repo.settleAttempt(userId, attemptId, g, remediationFor);
   return { ...result, perQuestion: undefined, gateStatus: settled.status };
+}
+
+/** atlas-lab: the hidden-test bundle for a gate (runner token, scope tests:read). Never reaches the browser (X-06). */
+export function gateBundle(ref: string) {
+  const b = getContent().gateBundles.get(ref);
+  if (!b) throw new LearningError("NOT_FOUND", "No test bundle with that reference.");
+  const { fileContents, sha256, ...manifest } = b;
+  return { ref: b.ref, sha256, manifest, files: fileContents };
+}
+
+export interface RunnerGateResult {
+  bundle: string; bundle_sha256: string; runner_version: string;
+  results: { test: string; passed: boolean; duration_ms: number; message?: string | undefined }[];
+  docker: { image_digest: string; network: "none" };
+}
+
+/**
+ * Records an atlas-lab gate run as runner_result evidence (counting evidence, D-15). The server re-checks what it can:
+ * the bundle hash must be the current bundle's and the result must list exactly the bundle's tests. The learner's
+ * machine could still forge a run (THREAT RR1); every gate shows which evidence passed it.
+ */
+export async function recordRunnerResult(userId: string, r: RunnerGateResult) {
+  const b = getContent().gateBundles.get(r.bundle);
+  if (!b) throw new LearningError("NOT_FOUND", "No test bundle with that reference.");
+  if (r.bundle_sha256 !== b.sha256) throw new LearningError("INVALID", "The bundle you ran is not the current one. Run `atlas-lab gate` again to fetch it.", { expected: b.sha256 });
+  const names = r.results.map((x) => x.test);
+  if (names.length !== b.tests.length || new Set(names).size !== names.length || b.tests.some((t) => !names.includes(t))) {
+    throw new LearningError("INVALID", "The result must list exactly the bundle's tests.", { expected: b.tests });
+  }
+  const gateId = findGateByRef(r.bundle);
+  if (!gateId) throw new LearningError("NOT_FOUND", "No gate uses this bundle.");
+  const { attemptId, gate: g } = await writableAttempt(userId, gateId, "runner");
+  const passedCount = r.results.filter((x) => x.passed).length;
+  await repo.addEvidence(attemptId, {
+    kind: "runner_result", ref: r.bundle, passed: passedCount === b.tests.length, verified: true,
+    method: `atlas-lab ${r.runner_version}: ${passedCount}/${b.tests.length} hidden tests; bundle ${b.sha256.slice(0, 12)}; image ${r.docker.image_digest.slice(7, 19)}; network none`,
+  });
+  const settled = await repo.settleAttempt(userId, attemptId, g, remediationFor);
+  return { gateId, attemptId, passed: passedCount === b.tests.length, passedCount, total: b.tests.length, gateStatus: settled.status,
+    failures: r.results.filter((x) => !x.passed).map((x) => ({ test: x.test, message: x.message ?? null })) };
+}
+
+function findGateByRef(ref: string): string | undefined {
+  for (const w of getContent().curriculum.ri_weeks) for (const g of w.gates) if (g.required_evidence.some((e) => e.kind === "runner_result" && e.ref === ref)) return g.id;
+  return undefined;
 }
 
 export async function scoreRubric(userId: string, attemptId: number, role: "self" | "reviewer", scores: { criterion: string; level: "missing" | "partial" | "competent" | "strong"; note?: string | undefined }[]) {

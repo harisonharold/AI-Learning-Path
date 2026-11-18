@@ -1,4 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { inject } from "vitest";
 import { setDbForTests } from "../../db/client.ts";
@@ -23,6 +25,7 @@ export function testEnv() {
     INTERNAL_HMAC_KEY: "test-internal-hmac-key-0123456789abcdef",
     GITHUB_APP_CLIENT_ID: "Iv1.test",
     GITHUB_APP_CLIENT_SECRET: "test-client-secret",
+    RAW_DATA_DIR: join(tmpdir(), "atlas-raw-test"),
   });
   return { db: setDbForTests(inject("dbUrl")), redis: setRedisForTests(inject("redisUrl")) };
 }

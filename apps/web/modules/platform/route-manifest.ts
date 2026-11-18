@@ -2,8 +2,8 @@
  * Every app/api route must be listed here; a test fails if a route file is missing (AT-04).
  * "owned" routes address one user's resource; the cross-user matrix calls them with another user's id and expects 403.
  */
-export type RouteAuth = "public" | "session" | "better-auth" | "hmac";
-export type OwnedResource = "job" | "card" | "attempt";
+export type RouteAuth = "public" | "session" | "better-auth" | "hmac" | "runner";
+export type OwnedResource = "job" | "card" | "attempt" | "project" | "run" | "report" | "runner_token";
 export interface RouteSpec {
   file: string;
   methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
@@ -40,4 +40,18 @@ export const ROUTES: RouteSpec[] = [
   { file: "app/api/settings/route.ts", methods: ["GET", "PUT"], auth: "session" },
   { file: "app/api/time-logs/route.ts", methods: ["POST"], auth: "session" },
   { file: "app/api/sources/[id]/report/route.ts", methods: ["POST"], auth: "session" },
+  // P2 lab
+  { file: "app/api/projects/route.ts", methods: ["GET", "POST"], auth: "session" },
+  { file: "app/api/projects/[id]/route.ts", methods: ["GET", "PATCH"], auth: "session", owned: { method: "GET", resource: "project" } },
+  { file: "app/api/projects/[id]/runs/route.ts", methods: ["POST"], auth: "session" },
+  { file: "app/api/projects/[id]/report/route.ts", methods: ["POST"], auth: "session" },
+  { file: "app/api/runs/compare/route.ts", methods: ["GET"], auth: "session" },
+  { file: "app/api/runs/[id]/route.ts", methods: ["GET"], auth: "session", owned: { method: "GET", resource: "run" } },
+  { file: "app/api/reports/[id]/route.ts", methods: ["GET"], auth: "session", owned: { method: "GET", resource: "report" } },
+  { file: "app/api/runner/tokens/route.ts", methods: ["GET", "POST"], auth: "session" },
+  { file: "app/api/runner/tokens/[id]/route.ts", methods: ["DELETE"], auth: "session", owned: { method: "DELETE", resource: "runner_token" } },
+  // atlas-lab (bearer runner token only; AT-18)
+  { file: "app/api/runner/results/route.ts", methods: ["POST"], auth: "runner" },
+  { file: "app/api/runner/bundle/route.ts", methods: ["GET"], auth: "runner" },
+  { file: "app/api/runner/whoami/route.ts", methods: ["GET"], auth: "runner" },
 ];

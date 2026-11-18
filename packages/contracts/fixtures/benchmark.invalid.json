@@ -1,0 +1,52 @@
+{
+ "body": {
+  "schema_version": "2",
+  "project_id": 1,
+  "config_name": "batch=8",
+  "config": {
+   "batch_size": 8,
+   "model": "tiny-llm",
+   "threads": 4,
+   "warmup_requests": 50
+  },
+  "config_hash": "nothex",
+  "env": {
+   "cpu": "AMD EPYC 7B13",
+   "cpu_count": 8,
+   "memory_mb": 32768,
+   "os": "Linux 6.8 x86_64",
+   "python": "3.12.7",
+   "libs": {
+    "numpy": "2.5.5",
+    "torch": "2.9.1"
+   },
+   "git_sha": "abc",
+   "git_dirty": false,
+   "container_digest": null,
+   "gpu": []
+  },
+  "metrics": [
+   {
+    "name": "Latency",
+    "unit": "ms",
+    "samples": []
+   }
+  ],
+  "gpu_timeline": [],
+  "status": "failed",
+  "is_baseline": false,
+  "is_warmup": false,
+  "started_at": "2026-11-18T10:00:00Z",
+  "ended_at": "2026-11-18T10:01:00Z",
+  "command": "atlas-lab run bench.py --repeat 5",
+  "unknown_field": true
+ },
+ "expected_error_paths": [
+  "schema_version",
+  "config_hash",
+  "env.git_sha",
+  "metrics.0.name",
+  "metrics.0.samples",
+  ""
+ ]
+}

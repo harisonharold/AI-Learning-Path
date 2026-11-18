@@ -1,0 +1,22 @@
+# Gate test bundle: fetched only by atlas-lab with a runner token (scope tests:read); never served to the browser (X-06).
+ref: "atlas-lab:w01@1"
+exercise: ex-w01-log-levels
+title: "Count log levels: hidden tests"
+# Pinned by digest (THREAT T-C2). atlas-lab runs: docker run --network none --read-only --cpus 1 --memory 256m ...
+image: "python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b"
+command: ["python", "-I", "/bundle/harness.py"]
+submission: solution.py
+timeout_seconds: 60
+memory_mb: 256
+cpus: 1
+canary: atlas-gate-canary-w01-7f3a
+files: [harness.py, test_hidden.py]
+tests:
+  - test_counts_mixed_levels
+  - test_extra_whitespace_and_newlines
+  - test_level_must_be_second_field
+  - test_case_sensitive
+  - test_no_zero_entries
+  - test_generator_input_consumed_once
+  - test_large_input
+  - test_input_not_mutated
