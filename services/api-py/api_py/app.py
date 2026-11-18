@@ -4,12 +4,13 @@ It holds no database credentials (single-writer rule, THREAT T-D4)."""
 from typing import Any
 
 import redis
+from atlas_common import report, stats
 from atlas_common.env import CommonEnv, load
 from atlas_common.hmac_sig import NonceStore, RedisNonceStore, verify_request
 from atlas_common.logging_json import log, register_secrets
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Env(CommonEnv):
@@ -18,6 +19,24 @@ class Env(CommonEnv):
 
 class Echo(BaseModel):
     message: str
+
+
+class Metric(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    values: list[float] = Field(min_length=1, max_length=1_000_000)
+
+
+class SummaryRequest(BaseModel):
+    metrics: list[Metric] = Field(min_length=1, max_length=32)
+    seed: int = stats.DEFAULT_SEED
+    resamples: int = Field(default=stats.DEFAULT_RESAMPLES, ge=100, le=stats.MAX_RESAMPLES)
+
+
+class CompareRequest(BaseModel):
+    a: list[float] = Field(min_length=1, max_length=1_000_000)
+    b: list[float] = Field(min_length=1, max_length=1_000_000)
+    seed: int = stats.DEFAULT_SEED
+    resamples: int = Field(default=stats.DEFAULT_RESAMPLES, ge=100, le=stats.MAX_RESAMPLES)
 
 
 def create_app(env: Env | None = None, store: NonceStore | None = None) -> FastAPI:
@@ -63,6 +82,30 @@ def create_app(env: Env | None = None, store: NonceStore | None = None) -> FastA
     @app.post("/diag/echo", dependencies=[Depends(signed)])
     def echo(payload: Echo) -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
         return {"echo": payload.message, "service": "api-py"}
+
+    def bad_input(e: Exception) -> HTTPException:
+        return HTTPException(422, {"code": "BAD_SAMPLES", "message": str(e)})
+
+    @app.post("/stats/summary", dependencies=[Depends(signed)])
+    def summary(req: SummaryRequest) -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
+        try:
+            return {"metrics": {m.name: stats.summarize(m.values, req.seed, req.resamples) for m in req.metrics}}
+        except stats.StatsInputError as e:
+            raise bad_input(e) from e
+
+    @app.post("/stats/compare", dependencies=[Depends(signed)])
+    def compare(req: CompareRequest) -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
+        try:
+            return stats.compare(req.a, req.b, req.seed, req.resamples)
+        except stats.StatsInputError as e:
+            raise bad_input(e) from e
+
+    @app.post("/reports/render", dependencies=[Depends(signed)])
+    def render(payload: dict[str, Any]) -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
+        try:
+            return report.build(payload)
+        except (KeyError, stats.StatsInputError) as e:
+            raise bad_input(e) from e
 
     return app
 
