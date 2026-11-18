@@ -23,7 +23,9 @@ export const slugify = (s: string) => s.toLowerCase().replace(/`/g, "").replace(
 export async function LessonBody({ source, sandboxOrigin }: { source: string; sandboxOrigin: string }) {
   const { default: Content } = await evaluate(preprocess(source), {
     ...runtime,
-    rehypePlugins: [[rehypeShiki, { themes: { light: "github-light", dark: "github-dark" }, defaultColor: false }]],
+    // Two GitHub-theme colours fall below 4.5:1 (axe, AT-13): light orange #e36209 and the comment grey #6a737d; swap them.
+    rehypePlugins: [[rehypeShiki, { themes: { light: "github-light", dark: "github-dark" }, defaultColor: false,
+      colorReplacements: { "github-light": { "#6a737d": "#57606a", "#e36209": "#b45000" }, "github-dark": { "#6a737d": "#9ea7b3" } } }]],
   });
   return (
     <Content
