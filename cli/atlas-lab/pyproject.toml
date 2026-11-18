@@ -1,0 +1,17 @@
+[project]
+name = "atlas-lab"
+version = "0.1.0"
+description = "Systems Atlas local runner: environment capture, benchmark runs, gate tests in Docker (--network none), uploads."
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = ["typer>=0.29,<1", "httpx>=0.28,<1"]
+
+[project.scripts]
+atlas-lab = "atlas_lab.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["atlas_lab"]

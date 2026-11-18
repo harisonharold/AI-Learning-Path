@@ -163,7 +163,8 @@ export async function submitQuiz(userId: string, gateId: string, quizId: string,
 }
 
 /** atlas-lab: the hidden-test bundle for a gate (runner token, scope tests:read). Never reaches the browser (X-06). */
-export function gateBundle(ref: string) {
+export function gateBundle(refOrExercise: { ref: string } | { exercise: string }) {
+  const ref = "ref" in refOrExercise ? refOrExercise.ref : getContent().exercises.get(refOrExercise.exercise)?.gate_tests_ref ?? "";
   const b = getContent().gateBundles.get(ref);
   if (!b) throw new LearningError("NOT_FOUND", "No test bundle with that reference.");
   const { fileContents, sha256, ...manifest } = b;
