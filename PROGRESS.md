@@ -1,5 +1,103 @@
 # PROGRESS.md
 
+## 2026-11-19 — P3-core: source verification + paper library (finished on branch `p3-core`; awaiting review)
+
+With P3-core, v1 (P0 + P1 + P2 + P3-core) is feature-complete.
+
+### Built
+- **safeFetch, the SSRF guard (D-17, D-67):**
+  - Allows http/https on ports 80/443 only, and no credentials in the URL.
+  - Parses hosts with the WHATWG parser, so decimal, octal and hex IPv4 forms are normalised.
+  - Refuses localhost, `*.internal` and `*.local` names, single-label names and Compose service names.
+  - Checks every DNS answer against IPv4/IPv6 blocklists: private, loopback, link-local, CGNAT, documentation, multicast and reserved ranges, mapped/NAT64/compat forms, and the Compose subnet.
+  - Connects to the validated address only, so rebinding has no effect.
+  - Re-checks every redirect (max 3), times out at 5 s to connect and 10 s total, aborts bodies over 2 MB mid-stream, and sends no cookies or credentials.
+- **Verifiers (D-68):**
+  - arXiv through its export API; GitHub through REST `GET /repos` and `GET /repos/{o}/{r}/issues/{n}`; other URLs by page title; price pages say "estimate, read on DATE".
+  - A captcha or access-denied page is never verified.
+  - Rate limits, timeouts and server errors keep the last status.
+- **Jobs and scheduling (D-69):**
+  - `verify.source` jobs run on worker-node, which reports results back over signed requests and holds no database credentials.
+  - A nightly BullMQ schedule (03:17 UTC) asks web, over HMAC, to queue every source not checked in 20 hours.
+  - "Re-check now" on each lesson resource, and "Report a broken link" now re-checks immediately.
+- **Live data (AT-12, D-70):**
+  - All 26 seed sources were re-checked on 2026-11-19 by the real verifier on GitHub Actions runners: 25 verified, 1 partial.
+  - That includes the four sources left unverified in P2.
+  - The revoke link (D-37) redirects to GitHub sign-in, so it is "partial". The account-delete page now shows that state from its sources row (D-72).
+- **Paper library (D-71):** `/research/papers`, never locked.
+  - Add a paper by arXiv id; title, authors and abstract come only from arXiv.
+  - Or add a URL with your own title, shown as unverified until checked.
+  - Notes, read/analysed status, and FULLTEXT search over title, abstract and notes.
+- **P2 review follow-ups:**
+  - Comparisons and reports that used only the first 100,000 stored samples show a note naming the runs (D-76).
+  - GitHub Actions moved to Node 24 majors, still SHA-pinned (D-74). The Node 20 warning no longer appears in CI logs.
+  - The Python CI job now pulls the gate image, so its real Docker gate test runs there too.
+- **Q27 course graders (D-75):** licences and pinned commits are recorded and enforced by a content test. The table is below.
+
+### Q27: course graders, licences and pinned commits (read 2026-11-19; nothing copied into this repo)
+| Week / gate | Course | Repository | Pinned commit(s) | Licence (from its LICENSE file) | Use allowed | Status |
+|---|---|---|---|---|---|---|
+| W4 `atlas-lab:w04@1` | MIT 6.1810 (Fall 2026) | `git://g.csail.mit.edu/xv6-labs-2026` | `util` 8138d07d83441198b898e37d22840f5900cc0c32, `syscall` 99161db76e00d70945f5248c7439b64323e6077c | MIT (xv6 permission notice) | yes | pinned; bundle not built (Q29) |
+| W7 `atlas-lab:w07@1` | Gossip Glomers on Maelstrom | `https://github.com/jepsen-io/maelstrom` | `v0.2.4` b70544f95ee0579b1a5e4bdf60bb2f90a44171bc | EPL-1.0 (running the program is permitted) | yes | pinned; bundle not built (Q29) |
+| W8 `atlas-lab:w08@1` | CMU 15-445 BusTub P1 | `https://github.com/cmu-db/bustub` | `master` 820bcaf90710ec39f463532a10f6c66cd2368491 | MIT | yes; course rules: no coding agents on P1-P2, don't publish solutions | pinned; bundle not built (Q29) |
+
+No licence forbids this use, so no gate became manual/self-assessed. The W2, W3, W5, W6 and W8-exam gates use Systems Atlas's own hidden tests, not course graders; those bundles are still to be written.
+
+### Tested (local, 2026-11-19; CI on the branch: see below)
+| Suite | Result |
+|---|---|
+| Lint / strict typecheck | clean |
+| Web unit / UI / worker-node | 196 / 71 / 73 passed (worker-node includes X-04 and the verifiers) |
+| Integration (Testcontainers MySQL 8.4 + Redis 7) | 139 passed |
+| Python: services + atlas-lab | ruff, format and pyright clean; 69 + 40 = 109 passed |
+| Playwright | 99 passed, 0 skipped: 37 e2e + 62 axe (sign-in, 27 pages, 3 project tabs, in both themes) |
+| AT-01 / AT-03 + X-06 / X-02 / forbidden strings | pass / 0 findings (132 files, 11 canaries) / pass / pass |
+
+Acceptance tests covered in P3-core:
+- **AT-12 (live data):**
+  - e2e: a lesson resource forced 40 days old shows "Stale".
+  - "Re-check now" then runs worker-node, then safeFetch, then the signed callback, and the resource shows today's date.
+- **AT-22:**
+  - `verify.test.ts` parses the arXiv response recorded on 2026-11-19 through the full fetch pipeline: title "Efficient Memory Management for Large Language Model Serving with PagedAttention", first author Woosuk Kwon.
+  - The integration test stores that title on the source and fills the paper. The e2e test does the same through the UI.
+  - The live check is the nightly job wherever the stack runs; the recorder runs did it on GitHub Actions on 2026-11-19.
+- **AT-23:**
+  - Unit: a small captcha page is partial; 403 "Access denied" and Cloudflare's "Just a moment" (503) are broken; a large normal page that mentions captcha in a script is verified; a sign-in redirect is partial.
+  - Integration and e2e cover the same rules end to end (`blocked.example.org` ends up partial).
+- **AT-26:** integration and e2e search for "fragmentation", which appears only in the abstract, and find the paper. Notes are searchable; two-letter tokens like "KV" work; operator characters are harmless.
+- **X-04:**
+  - 57 unit cases, every one named in PLAN §5.
+  - e2e: a paper URL `http://redis:6379/` is stored as a failed check with reason `port`.
+- **AT-04:** the route manifest covers all 43 routes; the cross-user matrix adds papers.
+
+### Failed, then fixed during P3-core (not hidden)
+- **The first live run flagged two good GitHub pages as captchas:** GitHub's scripts mention "captcha". The heuristic now checks titles always and body phrases only on small pages or errors. The second run verified the FSRS wiki and classed the revoke link as a sign-in redirect.
+- **A race made the e2e test flaky:** a verified source next to a paper still showing its placeholder title. Source and paper updates now happen in one transaction.
+- **The web image failed to build:** an integration test imported worker-node's parser statically, and those files aren't in the web build context. It now loads the parser at run time.
+- **The local disk filled up (100%)** with 22 GB of Docker build cache, and MySQL test containers could not start. The cache was pruned.
+- **setup-node v5 auto-caching:** it tried to cache pnpm in a job without pnpm. That job now disables the cache.
+- **Docker Hub rate limits (429)** blocked local image builds. The local daemon now uses Google's mirror; the repository is unchanged.
+- **Tests that hard-coded the old seed facts** (2026-11-16 dates, revoke link "unverified") were updated to the live-verified seed.
+- **I pushed one commit with two type errors in a test file** and fixed them in the next commit.
+
+### Not done / limits (honest)
+- **Course-grader bundles aren't built yet (Q29),** and Systems Atlas's own bundles for W2, W3, W5, W6 and the W8 exam aren't written. Those gates still say "hidden tests not published yet".
+- **Verification runs only while the stack runs (RR13).** A machine that is off at night skips the sweep; resources turn stale after 30 days, and Settings shows the last check.
+- **Proxies aren't supported by safeFetch,** because they would bypass address pinning. In this build environment the containers can't reach the internet, which is why fixtures were recorded on GitHub Actions.
+- **The AT-22 live check isn't a CI job.** CI uses the recorded fixture; the live check is the app's nightly sweep in a running deployment.
+
+### Mock data
+- **In the product:** unchanged. Only the optional sample-data project.
+- **Test-only:**
+  - The mock server now also answers for three hosts during e2e (a course page, the recorded arXiv response, a captcha page).
+  - worker-node accepts test-only DNS/dial maps; its env loader refuses them outside `ATLAS_ENV=test`.
+
+### What I need from you
+1. Review of the P3-core PR.
+2. Decisions **D-67…D-76** (PLAN §9), especially D-67 (guard in worker-node), D-68 (verification rules) and D-70 (fixtures recorded on GitHub Actions).
+3. **Q29:** toolchain images for course graders. I recommend our own Dockerfiles, built locally, with the digest recorded per result.
+4. Your call on what's next: v1 is feature-complete, so the options are P3-rest (dossiers), P4, or hardening first.
+
 ## 2026-11-18 — P2 Lab (finished on branch `p2-lab`; awaiting review)
 
 ### Built
