@@ -5,7 +5,7 @@ import { signIn, sql, userId } from "../support/stack.ts";
 
 /** AT-13 starts in P1; P0 runs it on every page that exists, in both themes. */
 const PAGES = ["/today", "/roadmap", "/learn", "/learn/w01-tooling", "/learn/w03-caches", "/learn/w04-os", "/learn/w05-concurrency", "/learn/w06-networking", "/learn/w07-go-dsa", "/learn/w08-db-internals", "/gates/g-w01", "/gates/g-w02", "/lab", "/lab/exercises/ex-w01-log-levels",
-  "/workspace", "/diagnostic", "/diagnostic/result", "/research", "/research/projects", "/analytics/benchmarks", "/open-source", "/mentor", "/interview", "/portfolio",
+  "/workspace", "/diagnostic", "/diagnostic/result", "/research", "/research/projects", "/research/papers", "/analytics/benchmarks", "/open-source", "/mentor", "/interview", "/portfolio",
   "/analytics", "/settings"];
 /** P2: the project workspace on its default, runs and report tabs. The e2e account-delete test removes earlier data,
  * so this creates a pre-registered project with one uploaded run when none exists. */

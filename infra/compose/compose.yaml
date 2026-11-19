@@ -75,7 +75,9 @@ services:
     build: { context: ../.., dockerfile: apps/worker-node/Dockerfile }
     environment:
       <<: *hmac
+      ATLAS_ENV: ${ATLAS_ENV:-development}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      WEB_INTERNAL_URL: http://web:3000
     networks: [internal]
     depends_on: { redis: { condition: service_healthy } }
 

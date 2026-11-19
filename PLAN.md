@@ -1,6 +1,6 @@
 # PLAN.md — Systems Atlas
 
-Status: **P0 (PR #1), P1 (PR #2) and the Node 24 move (PR #3, D-52) await merge. P2 Lab done on branch `p2-lab` (2026-11-18), awaiting review; decisions D-53…D-66 below.** Progress and test results: `PROGRESS.md`.
+Status: **P0 (PR #1), P1 (PR #2), Node 24 (PR #3) and P2 (PR #4) await merge; D-53…D-66 approved 2026-11-19. P3-core (source verification + paper library) done on branch `p3-core` (2026-11-19), awaiting review; decisions D-67…D-76 below. With P3-core, v1 is feature-complete.** Progress and test results: `PROGRESS.md`.
 
 Authoritative spec: `docs/spec/G_claude_code_prompt.md` (wins on conflict). Supporting: `docs/spec/{A..F,H}_*.md`, `docs/spec/SOURCES.md`. This plan references those files by section instead of restating them.
 
@@ -335,8 +335,9 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 | Q25 | Lessons for weeks 4-24: the curriculum, gates and rubrics are all in `content/`, but lesson text exists only for weeks 1-3 (Q12). Write the next lessons per phase as weeks become reachable, or batch them? | Q12 | **Resolved 2026-11-17:** W4-W8 next, and lessons always stay at least one week ahead of what the learner can reach. `q-w04` now; `q-w20-exam` later |
 | Q26 | ts-fsrs 6 and newer tools want Node 24. Move the stack to Node 24 (images, CI, `engines`) during P2? | D-41 | **Resolved 2026-11-17:** yes, at the start of P2, its own small PR (D-52) |
 | Q24 | Refreshing a GitHub user-to-server token is also a `POST` to `https://github.com/login/oauth/access_token` (`grant_type=refresh_token`). I treat "the OAuth token exchange" as covering both code exchange and refresh at that one endpoint, both in `modules/auth`. OK? | AT-27 reworded | Yes |
-| ● Q27 | Gate bundles for weeks 2-8 need real graders: CS:APP/xv6 lab graders, Maelstrom checks, BusTub tests. Those come from course repos with their own licences and rules (15-445 asks students not to publish solutions). Proposal: atlas-lab runs the official graders from **your own clone** of each course repo, pinned by commit, inside the same `--network none` container, and uploads only pass/fail per test; Systems Atlas never redistributes their code. OK? | D-60 | Recommended: yes. Until then W2-W8 code gates stay "hidden tests not published yet" |
-| ● Q28 | atlas-lab distribution: install from this repo (`uv tool install ./cli/atlas-lab`) or publish it to PyPI? Publishing is an outward action. | D-61 | Recommended: install from the repo in v1; no PyPI |
+| Q27 | Gate bundles for weeks 2-8 need real graders: CS:APP/xv6 lab graders, Maelstrom checks, BusTub tests. Those come from course repos with their own licences and rules (15-445 asks students not to publish solutions). Proposal: atlas-lab runs the official graders from **your own clone** of each course repo, pinned by commit, inside the same `--network none` container, and uploads only pass/fail per test; Systems Atlas never redistributes their code. OK? | D-60 | **Resolved 2026-11-19:** yes, from the learner's own pinned clone, never vendored; licence + commit recorded (D-75); a forbidding licence makes the gate manual/self-assessed |
+| Q28 | atlas-lab distribution: install from this repo (`uv tool install ./cli/atlas-lab`) or publish it to PyPI? Publishing is an outward action. | D-61 | **Resolved 2026-11-19:** install from this repo only; never publish to PyPI or any registry |
+| ● Q29 | Course-grader bundles (W4 xv6, W7 Maelstrom, W8 BusTub) need toolchain images without network access: a RISC-V toolchain + QEMU, a JVM + Go, clang + CMake. Proposal: Systems Atlas ships small Dockerfiles (our own, no course code) that atlas-lab builds locally once; the image digest is recorded with every result. The alternative is pulling third-party images by digest. | D-75 | Recommended: our Dockerfiles, built locally |
 
 ---
 
@@ -433,6 +434,21 @@ Resolved items keep their row for traceability. Q1, Q8, Q10–Q12, Q15, Q17–Q2
 | D-64 | Apache **ECharts 6.1.0** (spec-listed) loaded lazily; every chart is `aria-hidden` next to a text summary and a data table; series differ by dash pattern as well as colour | E.1, R-10 |
 | D-65 | The services image installs only `api-py` and `worker-py` (`uv sync --package`); atlas-lab is a workspace member but not part of any image | smaller images |
 | D-66 | Two Shiki GitHub-theme colours that fail 4.5:1 are replaced (`#e36209`→`#b45000` light, `#6a737d`→`#57606a` light / `#9ea7b3` dark) | AT-13 (found by axe on the W5 lesson) |
+
+### Decisions made during P3-core (for review)
+
+| ID | Decision | Why |
+|---|---|---|
+| D-67 | `safeFetch` lives in worker-node (`apps/worker-node/src/safe-fetch.ts`), the only service that fetches untrusted URLs; web only enqueues jobs. X-04's tests are in `apps/worker-node/tests/safe-fetch.test.ts`, not the `apps/web/modules/platform/tests` path named in §5 | one fetcher, one guard |
+| D-68 | Verification outcomes: `verified`, `partial` (captcha/bot wall on a 2xx, sign-in redirect, missing or changed title), `broken` (4xx, SSRF block, DNS failure, arXiv error), `unchanged` (429, 5xx, timeout: last status kept, attempt noted). Captcha markers: always in the title; body phrases only on pages under 64 KB or on errors (the first live run flagged two good GitHub pages with a looser rule). Curated titles of docs/courses stay; a paper's title comes from arXiv | AT-23, T-V2, no invented facts |
+| D-69 | Nightly re-verification: a BullMQ job scheduler in worker-node (03:17 UTC; `VERIFY_CRON=off` disables) calls a signed web endpoint that queues every source not checked for 20 h (max 300 per sweep). "Report a broken link" and "Re-check now" queue one source | R-02 |
+| D-70 | Network fixtures (arXiv 2309.06180, GitHub `/repos/vllm-project/vllm`) were recorded unchanged on a GitHub Actions runner because the build environment can't reach arXiv; the temporary workflow was removed afterwards. The same runs re-verified all 26 seed sources live on 2026-11-19 (25 verified, 1 partial) and `content/sources.yaml` records that | AT-22 "network-recorded fixture"; honest dates |
+| D-71 | Paper library: add by arXiv id (or a URL with your own title, shown as unverified until checked). Title, authors and abstract come only from the arXiv API. Search is MySQL FULLTEXT in boolean mode with operators stripped and each word a required prefix term | FR-11, AT-26 |
+| D-72 | The account-delete revoke link takes its status from its `sources` row; the live check found it behind GitHub sign-in, so it shows "Link checked; page needs sign-in" and the steps stay labelled unverified (resolves D-37) | D-37 |
+| D-73 | worker-node accepts test-only `VERIFY_TEST_DNS`/`VERIFY_TEST_DIAL` (and API base URLs) so e2e runs the full guard against the mock server; the env loader refuses them unless `ATLAS_ENV=test` | same pattern as the mock GitHub URLs (P0) |
+| D-74 | GitHub Actions moved to their first Node 24 majors, still SHA-pinned: checkout v5.1.0, setup-node v5.0.0, pnpm/action-setup v4.4.0, setup-uv v7.6.0 (SHAs read with `git ls-remote`, `runs.using` checked in each `action.yml`). setup-node v5 caches automatically when `packageManager` is set, so jobs without pnpm pass `package-manager-cache: false` | Node 20 deprecation warning (P2 review) |
+| D-75 | `content/course-graders.yaml` records each course grader's repository, licence (read from its LICENSE file), pinned commits and course rules; a content test fails if an entry's licence does not allow the use while its gate still asks for atlas-lab evidence. The grader bundles themselves are not built yet (Q29) | Q27 as approved |
+| D-76 | Comparisons and reports that used only the first 100,000 stored samples of a run say so in a visible note naming the runs (RR12) | P2 review |
 
 ---
 

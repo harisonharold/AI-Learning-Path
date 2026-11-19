@@ -6,7 +6,7 @@ Four to six months will not make anyone an expert, and this app cannot promise i
 
 Repository: https://github.com/harisonharold/AI-Learning-Path
 
-Status: **phases P0-P2 built** (groundwork, learning core, lab), each awaiting review in its own pull request. See `PROGRESS.md` for what works and what doesn't, and `PLAN.md` for the full plan.
+Status: **v1 built** (P0 groundwork, P1 learning core, P2 lab, P3-core source verification + paper library), each phase awaiting review in its own pull request. See `PROGRESS.md` for what works and what doesn't, and `PLAN.md` for the full plan.
 
 ## Run it (one command)
 
@@ -23,6 +23,9 @@ pnpm up        # writes .env with fresh random secrets on first run, builds, sta
 - Jaeger UI (dev only): http://localhost:16686.
 
 Stop with `pnpm down`.
+
+### Source verification and papers
+Every lesson resource shows when it was last verified; worker-node re-checks all sources every night (03:17 UTC) through an SSRF-guarded fetcher, and **Re-check now** does one on demand. The **paper library** (`/research/papers`) takes arXiv ids; titles, authors and abstracts come from the arXiv API, and you can search titles, abstracts and your notes.
 
 ### The lab and atlas-lab
 Experiments live under **Research → projects**. Pre-register a hypothesis, then upload runs. Uploads go through the [`atlas-lab` runner](cli/atlas-lab/README.md), which records the environment, runs gate tests in Docker with no network and uploads with a scoped token, or as a JSON file in the browser. The server recomputes every statistic from raw samples. **Benchmark analytics** shows CDFs, percentiles with bootstrap CIs and GPU timelines. Reports are Markdown/HTML and keep failed runs. To explore first, turn on **Settings → Sample data** (labelled SAMPLE DATA, never counted).

@@ -3,7 +3,7 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { attempts, cards, projectReports, projects, runConfigs, runs } from "../../db/schema/index.ts";
+import { attempts, cards, papers, projectReports, projects, runConfigs, runs, sources } from "../../db/schema/index.ts";
 import { createRunnerToken } from "../../modules/platform/internal/runner-tokens.ts";
 import { addLessonCards, seed } from "../../modules/learning/service.ts";
 import { closeQueues, enqueueJob } from "../../modules/platform/internal/jobs-repo.ts";
@@ -42,6 +42,9 @@ beforeAll(async () => {
   const [rep] = await db.insert(projectReports).values({ projectId: proj!.id, userId: b.id, jobId: "00000000-0000-0000-0000-00000000000b", status: "done", markdown: "# b's job", html: "<p>b</p>", runIds: [run!.id] }).$returningId();
   ownedOfB.report = String(rep!.id);
   ownedOfB.runner_token = String((await createRunnerToken(b.id, ["results:write"], 30)).id);
+  const src = (await db.select({ id: sources.id }).from(sources).limit(1))[0]!;
+  const [pap] = await db.insert(papers).values({ userId: b.id, sourceId: src.id, title: "b's job paper" }).$returningId();
+  ownedOfB.paper = String(pap!.id);
 });
 afterAll(async () => { await closeQueues(); });
 

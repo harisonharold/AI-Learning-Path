@@ -3,7 +3,7 @@
  * "owned" routes address one user's resource; the cross-user matrix calls them with another user's id and expects 403.
  */
 export type RouteAuth = "public" | "session" | "better-auth" | "hmac" | "runner";
-export type OwnedResource = "job" | "card" | "attempt" | "project" | "run" | "report" | "runner_token";
+export type OwnedResource = "job" | "card" | "attempt" | "project" | "run" | "report" | "runner_token" | "paper";
 export interface RouteSpec {
   file: string;
   methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
@@ -50,6 +50,11 @@ export const ROUTES: RouteSpec[] = [
   { file: "app/api/reports/[id]/route.ts", methods: ["GET"], auth: "session", owned: { method: "GET", resource: "report" } },
   { file: "app/api/runner/tokens/route.ts", methods: ["GET", "POST"], auth: "session" },
   { file: "app/api/runner/tokens/[id]/route.ts", methods: ["DELETE"], auth: "session", owned: { method: "DELETE", resource: "runner_token" } },
+  // P3-core: paper library and source verification
+  { file: "app/api/papers/route.ts", methods: ["GET", "POST"], auth: "session" },
+  { file: "app/api/papers/[id]/route.ts", methods: ["PATCH"], auth: "session", owned: { method: "PATCH", resource: "paper", body: { status: "read" } } },
+  { file: "app/api/sources/verify/route.ts", methods: ["POST"], auth: "session" },
+  { file: "app/api/internal/verify/sweep/route.ts", methods: ["POST"], auth: "hmac" },
   // atlas-lab (bearer runner token only; AT-18)
   { file: "app/api/runner/results/route.ts", methods: ["POST"], auth: "runner" },
   { file: "app/api/runner/bundle/route.ts", methods: ["GET"], auth: "runner" },

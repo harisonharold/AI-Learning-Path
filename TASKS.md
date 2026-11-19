@@ -64,13 +64,25 @@ Status: `done` = its tests pass; `todo`; `blocked` = waiting on Harison.
 | Sample-data toggle + SAMPLE DATA banner + exclusion | done | `research.test.ts`, e2e (AT-20) |
 | Lessons W4-W8 (75 cards) + q-w04 (Q25) | done | content validation, axe on each lesson |
 
-## P3-core Research (next; not started)
+## P3-core Research (done on `p3-core`, awaiting review)
+| Task | Status | Tests |
+|---|---|---|
+| safeFetch SSRF guard (worker-node) | done | X-04: `safe-fetch.test.ts` (57), e2e |
+| Verifiers: arXiv export API, GitHub REST repo/issue (GET), URL + title, price pages | done | `verify.test.ts` (AT-22 recorded fixture, AT-23), int, e2e |
+| verify.source jobs + signed callbacks; nightly sweep (03:17 UTC) + internal endpoint; "Re-check now" and "Report a broken link" | done | `papers-verification.test.ts`, e2e AT-12 live |
+| Live re-check of all seed sources (2026-11-19: 25 verified, 1 partial), incl. the 4 left unverified in P2 and the revoke link (D-37) | done | recorder runs on GitHub Actions |
+| Paper library: add by arXiv id/URL, notes, status, FULLTEXT search; never locked | done | AT-26 int + e2e, axe |
+| 100k-sample notes on comparisons and reports (P2 review, RR12) | done | `research.test.ts`, `test_report.py` |
+| GitHub Actions on Node 24 majors, SHA-pinned (P2 review) | done | CI, `ci-pins.test.ts` |
+| Q27 course-grader register: licences + pinned commits; licence rule enforced | done | `gate-bundles.test.ts` |
+
+## P3 Research engine (rest) / next phases
 | Task | Status |
 |---|---|
-| Source verification job (SSRF-guarded); verify the 4 sources stored as unverified in P2 and the revoke link (D-37) | todo |
-| Paper library (never locked) | todo |
+| Course-grader bundles for W4 (xv6), W7 (Maelstrom), W8 (BusTub): toolchain image, clone ancestry + unchanged-tests check, result parsers | blocked: waiting on Q29 |
+| Own hidden-test bundles for W2 (allocator), W3 (matmul), W5 exam, W6 (HTTP), W8 exam | todo (content) |
+| Dossiers, classification rules, novelty-check log (AT-24, AT-25) | todo |
 | Lessons for week 9 before the learner can reach week 8 (Q25 rule) | todo |
-| Gate bundles for W2-W8 (needs Q27) | blocked: waiting on Q27 |
 
 ## Revisit later
 | Task | Trigger | Status |
@@ -79,7 +91,8 @@ Status: `done` = its tests pass; `todo`; `blocked` = waiting on Harison.
 | Move to TypeScript 7 (D-30) | Next.js and typescript-eslint support the TS 7 native compiler | todo, check at each Next.js minor upgrade |
 | Better Auth tables vs upstream schema (D-36) | any better-auth upgrade | todo, re-diff core schema on upgrade |
 | Move to ts-fsrs 6 (D-41) | the stack runs Node 24 (Q26) | done (D-52) |
-| Upgrade GitHub Actions majors (checkout/setup-node/pnpm v4 run on deprecated Node 20, per CI warnings) | before Node 20 actions stop working | todo; re-pin SHAs from the CI log |
-| Compare and reports read raw gzip files for runs above 100k samples (RR12) | first run that large | todo |
+| Upgrade GitHub Actions majors (checkout/setup-node/pnpm v4 run on deprecated Node 20, per CI warnings) | before Node 20 actions stop working | done (D-74) |
+| Compare and reports read raw gzip files for runs above 100k samples (RR12) | first run that large | todo; a visible note covers it meanwhile (D-76) |
 | Refresh the pinned `python:3.12-slim` digest in gate bundles (security updates) | monthly dependency window (RR6) | todo; bumps the bundle version |
-| Python CI job: pre-pull the gate image so `test_real_bundle_in_docker...` runs there too (it is skipped in that job; the e2e job runs a real Docker gate) | next CI change | todo |
+| Python CI job: pre-pull the gate image so `test_real_bundle_in_docker...` runs there too | next CI change | done (P3-core) |
+| RR11 (hidden tests readable with tests:read) | before any public launch | accepted for single-user; revisit |

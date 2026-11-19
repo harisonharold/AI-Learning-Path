@@ -1,18 +1,20 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db/client.ts";
-import { user } from "../../../db/schema/index.ts";
+import { sources, user } from "../../../db/schema/index.ts";
 import { audit } from "./audit.ts";
 
 /**
  * GitHub grant revocation is manual (Q16): the platform never sends DELETE to GitHub.
- * Link/steps are UNVERIFIED: docs.github.com was unreachable from the build environment on 2026-11-16.
+ * The link's status comes from its `sources` row (seed id github-revoke-app), which the verification job re-checks
+ * (D-37). The page sits behind GitHub sign-in, so the job can confirm it exists ("partial") but not the steps.
  */
 export const GITHUB_REVOKE_HELP = {
   url: "https://github.com/settings/apps/authorizations",
-  verification: "unverified" as const,
-  verifiedAt: null,
+  verification: "unverified" as "verified" | "partial" | "unverified" | "broken",
+  verifiedAt: null as Date | null,
   note: "Link not yet verified by the source-verification job; GitHub may move this page.",
+  stepsNote: "The steps below are not verified: the settings page needs a GitHub sign-in to read.",
   steps: [
     "Open GitHub and go to Settings.",
     "Under Integrations, open Applications, then the 'Authorized GitHub Apps' tab.",
@@ -25,5 +27,6 @@ export const GITHUB_REVOKE_HELP = {
 export async function deleteAccount(userId: string) {
   await audit(userId, "account.delete", `user:${userId}`);
   await getDb().delete(user).where(eq(user.id, userId));
-  return GITHUB_REVOKE_HELP;
+  const row = (await getDb().select().from(sources).where(eq(sources.externalId, "content:github-revoke-app")).limit(1))[0];
+  return row ? { ...GITHUB_REVOKE_HELP, verification: row.verification, verifiedAt: row.verifiedAt, note: row.verifyNote ?? GITHUB_REVOKE_HELP.note } : GITHUB_REVOKE_HELP;
 }

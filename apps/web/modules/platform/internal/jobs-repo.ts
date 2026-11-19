@@ -8,8 +8,8 @@ import { getRedis } from "./redis.ts";
 import { currentTraceparent } from "./telemetry.ts";
 
 export const QUEUES = { py: "atlas-py", node: "atlas-node" } as const;
-export type JobKind = "diag.echo" | "stats.summarize" | "report.render";
-const KIND_QUEUE: Record<JobKind, string> = { "diag.echo": QUEUES.py, "stats.summarize": QUEUES.py, "report.render": QUEUES.py };
+export type JobKind = "diag.echo" | "stats.summarize" | "report.render" | "verify.source";
+const KIND_QUEUE: Record<JobKind, string> = { "diag.echo": QUEUES.py, "stats.summarize": QUEUES.py, "report.render": QUEUES.py, "verify.source": QUEUES.node };
 
 let queues: Map<string, Queue> | undefined;
 function queue(name: string): Queue {
@@ -24,7 +24,8 @@ function queue(name: string): Queue {
 
 /** Creates the durable jobs row first (web is the only DB writer), then enqueues. */
 /** `stored` replaces the payload in the jobs row when the queue payload is bulky (e.g. raw samples for stats). */
-export async function enqueueJob(userId: string, kind: JobKind, payload: Record<string, unknown>, stored?: Record<string, unknown>) {
+/** `userId` is null for system jobs such as the nightly verification sweep. */
+export async function enqueueJob(userId: string | null, kind: JobKind, payload: Record<string, unknown>, stored?: Record<string, unknown>) {
   const id = randomUUID();
   await getDb().insert(jobs).values({ id, userId, kind, status: "queued", payloadJson: stored ?? payload });
   const traceparent = currentTraceparent();

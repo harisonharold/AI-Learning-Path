@@ -118,6 +118,23 @@ export const Exercise = z
   .strict();
 export type Exercise = z.infer<typeof Exercise>;
 
+/** Q27: an external course grader atlas-lab may run from the learner's own pinned clone (never vendored). */
+export const CourseGrader = z
+  .object({
+    week: z.string(),
+    gate_ref: z.string().regex(/^atlas-lab:[a-z0-9-]+@[0-9]+$/),
+    course: z.string(),
+    repo: z.string().regex(/^(https|git):\/\//),
+    pins: z.record(z.string(), z.string().regex(/^[0-9a-f]{40}$/, "pins are full commit SHAs")).refine((p) => Object.keys(p).length > 0, "at least one pinned commit"),
+    licence: z.string().min(3),
+    use_allowed: z.boolean(),
+    grader: z.string(),
+    course_rules: z.string().nullable(),
+    status: z.string(),
+  })
+  .strict();
+export type CourseGrader = z.infer<typeof CourseGrader>;
+
 /** atlas-lab gate test bundle (content/gate-tests/<id>@<version>/bundle.yaml). Never served to the browser (X-06). */
 export const GateBundle = z
   .object({
@@ -156,11 +173,20 @@ export interface Content {
   diagnostic: Diagnostic;
   lessonBodies: Map<string, string>;
   gateBundles: Map<string, LoadedBundle>;
+  courseGraders: CourseGrader[];
 }
 
 /** Cross-reference checks. Returns a list of problems (empty = valid). */
 export function validateContent(c: Content): string[] {
   const errs: string[] = [];
+  const reqs = c.curriculum.ri_weeks.flatMap((w) => w.gates.flatMap((g) => g.required_evidence.map((e) => ({ week: w.id, gate: g.id, e }))));
+  for (const cg of c.courseGraders) {
+    const r = reqs.find((x) => x.e.kind === "runner_result" && x.e.ref === cg.gate_ref);
+    if (!r) errs.push(`course grader ${cg.gate_ref} matches no runner_result requirement`);
+    else if (r.week !== cg.week) errs.push(`course grader ${cg.gate_ref} is listed for ${cg.week} but the gate is in ${r.week}`);
+    // Q27: if a course licence does not allow running its grader, that gate must not ask for atlas-lab evidence.
+    if (!cg.use_allowed && r) errs.push(`${cg.gate_ref}: licence does not allow running the grader, so gate ${r.gate} must be manual/self-assessed`);
+  }
   for (const b of c.gateBundles.values()) {
     const ex = c.exercises.get(b.exercise);
     if (!ex) errs.push(`bundle ${b.ref} names unknown exercise ${b.exercise}`);

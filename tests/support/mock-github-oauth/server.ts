@@ -5,9 +5,20 @@
  *   GET  /api/user                   -> the mock user for a bearer token
  *   POST /__mock/user {id,login}     -> choose who "signs in" next (test control)
  *   GET  /__mock/requests            -> every request received, for the AT-27 traffic assertion
+ * P3-core (by Host header; worker-node's test DNS/dial map sends these hosts here, ATLAS_ENV=test only):
+ *   missing.csail.mit.edu  GET /                 -> a page with the course's title (AT-12 live re-check)
+ *   export.arxiv.org       GET /api/query?...    -> the arXiv response recorded on 2026-11-19 (AT-22 end to end)
+ *   blocked.example.org    GET /                 -> a captcha page (AT-23 end to end)
  */
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
+
+const VERIFY_PAGES: Record<string, (path: string) => [number, string, string] | null> = {
+  "missing.csail.mit.edu": (p) => (p === "/" ? [200, "text/html", "<html><head><title>The Missing Semester of Your CS Education</title></head><body>mock</body></html>"] : null),
+  "export.arxiv.org": (p) => (p.startsWith("/api/query") ? [200, "application/atom+xml", readFileSync("/fixtures/arxiv-2309.06180.xml", "utf8")] : null),
+  "blocked.example.org": () => [200, "text/html", '<html><head><title>One more step</title></head><body><div class="g-recaptcha"></div></body></html>'],
+};
 
 type MockUser = { id: number; login: string; name: string; email: string | null };
 const DEFAULT: MockUser = { id: 123658133, login: "harisonharold", name: "Harison", email: null };
@@ -25,6 +36,11 @@ createServer((req, res) => {
   req.on("data", (c) => (raw += c));
   req.on("end", () => {
     if (!url.pathname.startsWith("/__mock")) requests.push({ method: req.method ?? "", path: url.pathname, at: new Date().toISOString() });
+    const vhost = VERIFY_PAGES[(req.headers.host ?? "").split(":")[0]!];
+    if (vhost && req.method === "GET") {
+      const page = vhost(url.pathname + url.search);
+      if (page) return res.writeHead(page[0], { "content-type": page[1] }).end(page[2]);
+    }
     if (req.method === "GET" && url.pathname === "/login/oauth/authorize") {
       const redirect = url.searchParams.get("redirect_uri");
       if (!redirect || !url.searchParams.get("client_id")) return send(res, 400, { error: "invalid_request" });

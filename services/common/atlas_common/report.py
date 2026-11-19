@@ -150,6 +150,8 @@ def render(data: dict[str, Any]) -> dict[str, str]:
         ],
     )
     para(str(data.get("pooling_note", "")))
+    if data.get("sample_cap_note"):
+        para("Note: " + str(data["sample_cap_note"]))
 
     section("Comparisons against the baseline")
     comps: list[dict[str, Any]] = data.get("comparisons", [])

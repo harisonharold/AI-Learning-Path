@@ -25,3 +25,18 @@ describe("gate test bundles", () => {
     expect(validateContent({ ...content, gateBundles: tampered }).join()).toMatch(/canary missing/);
   });
 });
+
+describe("Q27 course graders", () => {
+  it("records a licence and full pinned commits for each course, and every entry maps to its week's gate", () => {
+    expect(content.courseGraders.map((c) => c.gate_ref).sort()).toEqual(["atlas-lab:w04@1", "atlas-lab:w07@1", "atlas-lab:w08@1"]);
+    for (const c of content.courseGraders) {
+      expect(c.licence.length).toBeGreaterThan(3);
+      for (const sha of Object.values(c.pins)) expect(sha).toMatch(/^[0-9a-f]{40}$/);
+    }
+    expect(validateContent(content)).toEqual([]);
+  });
+  it("a licence that forbids running the grader forces the gate to be manual/self-assessed", () => {
+    const forbidden = content.courseGraders.map((c) => (c.gate_ref === "atlas-lab:w08@1" ? { ...c, use_allowed: false } : c));
+    expect(validateContent({ ...content, courseGraders: forbidden }).join()).toMatch(/w08@1: licence does not allow.*g-w08 must be manual\/self-assessed/);
+  });
+});
