@@ -84,6 +84,12 @@ export default async function Page({ searchParams }: { searchParams: Search }) {
         </p>
       )}
 
+      {comparison && comparison.cappedRuns.length > 0 && (
+        <p role="note" className="panel" data-sample-cap>
+          <strong>Only the first {comparison.sampleCap.toLocaleString("en-US")} samples used.</strong>{" "}
+          {comparison.cappedRuns.map((r) => `Run #${r.runId} has ${r.n.toLocaleString("en-US")}`).join("; ")} samples of {metric}; the differences below use only the first {comparison.sampleCap.toLocaleString("en-US")} stored samples of each such run. The table above uses all samples.
+        </p>
+      )}
       {metric && chosen.length > 0 && (
         <section className="panel" aria-labelledby="pct-title">
           <h2 id="pct-title" className="text-xl">p50 / p95 / p99 with 95% bootstrap CIs</h2>

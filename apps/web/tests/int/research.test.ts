@@ -241,6 +241,17 @@ describe("AT-19: report generation needs a baseline and enough repetitions", () 
     expect(pr.readiness.ready).toBe(true);
     expect(pr.runs.some((r) => r.status === "failed")).toBe(true);
     expect((job.payloadJson as { run_ids: number[] }).run_ids.length).toBe(pr.runs.length);
+    // RR12: when a run used in the report has over 100,000 samples, the report says only the first 100,000 were used.
+    const firstRun = pr.runs.find((r) => r.status === "ok")!;
+    await db.update(runMetrics).set({ n: 120_000 }).where(eq(runMetrics.runId, firstRun.id));
+    const again = await call();
+    const job2 = (await db.select().from(jobs).where(eq(jobs.id, (await again.json() as { jobId: string }).jobId)))[0]!;
+    expect(job2.kind).toBe("report.render");
+    const { Queue } = await import("bullmq");
+    const q = new Queue("atlas-py", { connection: { url: process.env.REDIS_URL } });
+    const queued = await q.getJob(job2.id);
+    await q.close();
+    expect(String((queued?.data as { input: { sample_cap_note: string | null } }).input.sample_cap_note)).toMatch(new RegExp(`#${firstRun.id} \\(120000 samples\\).*first 100,000 stored samples`));
   });
 });
 
@@ -304,6 +315,13 @@ describe("AT-21 (web part) and AT-47: compare goes through api-py and degrades w
     expect(out.comparisons[0]!.stats.diff.p50.ci95).toEqual(fixture("stats-compare.fixture.json").expected.diff.p50.ci95);
     expect(out.comparisons[0]!.sameEnv).toBe(true);
     expect(out.comparisons[0]!.configDiff.map((d) => d.field)).toEqual(["batch_size"]);
+  });
+  it("RR12: a run with more than 100,000 samples is named in a visible note on the comparison and the report", async () => {
+    const [a, b] = await twoRuns();
+    await db.update(runMetrics).set({ n: 150_000 }).where(eq(runMetrics.runId, b!));
+    const out = await (await (await routes.compare()).GET(req(`/api/runs/compare?ids=${a},${b}&metric=latency_ms`, { cookie: u.cookie }))).json() as { sampleCap: number; cappedRuns: { runId: number; n: number }[] };
+    expect(out.sampleCap).toBe(100_000);
+    expect(out.cappedRuns).toEqual([{ runId: b, n: 150_000 }]);
   });
   it("with api-py down, returns stored summaries and degraded: true", async () => {
     process.env.API_PY_URL = "http://127.0.0.1:9";

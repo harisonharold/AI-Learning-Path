@@ -4,7 +4,10 @@
  * copied into apps/worker-node/tests/fixtures/ by hand, unchanged. Uses only Node built-ins and the real verifier.
  *   node apps/worker-node/scripts/record-fixtures.ts   (second run: re-checks the tightened captcha heuristic)
  */
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { safeFetch } from "../src/safe-fetch.ts";
 import { verifySource } from "../src/verify.ts";
@@ -29,3 +32,18 @@ for (const e of entries) {
   console.log(`=== VERIFY ${JSON.stringify({ id: e.id, url: e.url, verification: r.verification, method: r.method, note: r.note, title: r.title ?? null, finalUrl: r.finalUrl ?? null, licence: r.licence ?? null, lastActivityAt: r.lastActivityAt ?? null })}`);
 }
 console.log(`=== DONE ${new Date().toISOString()} sources=${entries.length}`);
+
+// Q27: course repositories atlas-lab may run graders from (the learner's own clone, pinned). Read-only lookups of
+// branch commits and the LICENSE header; nothing is copied into this repository.
+for (const repo of ["https://g.csail.mit.edu/xv6-labs-2026"]) {
+  try {
+    const refs = execFileSync("git", ["ls-remote", repo], { encoding: "utf8", timeout: 60_000 });
+    console.log(`=== COURSE-REFS ${repo}\n${refs.trim()}\n=== END COURSE-REFS`);
+    const dir = mkdtempSync(join(tmpdir(), "course-"));
+    execFileSync("git", ["clone", "-q", "--depth", "1", "--branch", "util", repo, dir], { timeout: 120_000 });
+    const lic = execFileSync("sh", ["-c", `ls ${dir}; head -12 ${dir}/LICENSE 2>/dev/null || echo NO-LICENSE-FILE`], { encoding: "utf8" });
+    console.log(`=== COURSE-LICENSE ${repo}\n${lic.trim()}\n=== END COURSE-LICENSE`);
+  } catch (e) {
+    console.log(`=== COURSE-FAILED ${repo}: ${e instanceof Error ? e.message.split("\n")[0] : String(e)}`);
+  }
+}

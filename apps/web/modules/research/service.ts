@@ -171,8 +171,10 @@ export async function compareRuns(userId: string, ids: number[], metric: string)
       warnings: confounderWarnings({ config: base!.config, env: base!.run.envJson as EnvLike }, { config: c.config, env: c.run.envJson as EnvLike }),
     });
   }
+  // RR12: compare reads at most the first 100,000 stored samples of a run; say so wherever it applies.
+  const capped = rs.map((r) => ({ runId: r.run.id, n: summaryOf(r.run.id)!.n ?? 0 })).filter((r) => r.n > repo.SAMPLE_CAP);
   return {
-    metric, degraded, baseRunId: base!.run.id,
+    metric, degraded, baseRunId: base!.run.id, sampleCap: repo.SAMPLE_CAP, cappedRuns: capped,
     runs: rs.map((r) => ({ id: r.run.id, configName: r.configName, isMock: r.run.isMock, summary: summaryOf(r.run.id)!.summaryJson, unit: summaryOf(r.run.id)!.unit })),
     comparisons: degraded ? comparisons.map((c) => ({ ...c, stats: null })) : comparisons,
   };
@@ -202,6 +204,10 @@ export async function requestReport(userId: string, projectId: number, now = new
   ]);
   const warnings = configs.filter((c) => !c.is_baseline).flatMap((c) => confounderWarnings(base, c).map((w) => `${base.name} vs ${c.name}: ${w}`));
   const unit = ms.find((m) => m.metric === prereg.primary_metric)?.unit ?? "";
+  const cappedRuns = ms.filter((m) => m.metric === prereg.primary_metric && (m.n ?? 0) > repo.SAMPLE_CAP && rows.some((r) => r.run.id === m.runId));
+  const cappedNote = cappedRuns.length
+    ? `Runs ${cappedRuns.map((m) => `#${m.runId} (${m.n} samples)`).join(", ")} have more than ${repo.SAMPLE_CAP.toLocaleString("en-US")} samples of ${prereg.primary_metric}; this report used only the first ${repo.SAMPLE_CAP.toLocaleString("en-US")} stored samples of each. The full sets are in the raw-data files.`
+    : null;
   const payload = {
     project_id: projectId, title: p.title, hypothesis: p.hypothesis, generated_at: now.toISOString(), is_sample: false,
     prereg: { ...prereg, preregistered_at: p.preregisteredAt?.toISOString() }, amendments: amendmentsOf(p.planMd), primary_metric: prereg.primary_metric, unit,
@@ -209,6 +215,7 @@ export async function requestReport(userId: string, projectId: number, now = new
     runs: rows.map((r) => ({ id: r.run.id, config: r.configName, status: r.run.status, is_baseline: r.run.isBaseline, is_warmup: r.run.isWarmup, env_fingerprint: r.run.envFingerprint,
       git_sha: (r.run.envJson as EnvLike).git_sha ?? null, started_at: r.run.startedAt?.toISOString() ?? "", failure_note: r.run.failureNote, command: r.run.command })),
     raw_data_note: "Raw samples for every run can be downloaded as JSON from the project page (Download raw data).",
+    sample_cap_note: cappedNote,
   };
   const jobId = await enqueueJob(userId, "report.render", payload, { project_id: projectId, run_ids: rows.map((r) => r.run.id) });
   const reportId = await repo.createReport(projectId, userId, jobId, rows.map((r) => r.run.id));

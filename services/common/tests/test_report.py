@@ -95,3 +95,9 @@ def test_user_text_is_escaped_in_html_and_markdown() -> None:
 
 def test_sample_reports_are_labelled() -> None:
     assert "SAMPLE DATA" in report.build(payload(is_sample=True))["markdown"]
+
+
+def test_sample_cap_note_is_shown() -> None:
+    out = report.build(payload(sample_cap_note="Runs #4 (150000 samples) have more than 100,000 samples"))
+    assert "Note: Runs #4 (150000 samples) have more than 100,000 samples" in out["html"]
+    assert "Note:" not in report.build(payload())["markdown"]
