@@ -104,7 +104,8 @@ export async function lesson(userId: string, slug: string, now = new Date()) {
     const row = rows.find((r) => r.url === d.url);
     const verifiedAt = row ? row.verifiedAt : d.verified_at;
     const verification = row?.verification ?? d.verification;
-    return { id: d.id, sourceId: row?.id ?? null, title: d.title, url: d.url, kind: d.kind, note: d.note ?? null, verification, verifiedAt, freshness: freshness({ verification, verifiedAt }, now) };
+    return { id: d.id, sourceId: row?.id ?? null, title: d.title, url: d.url, kind: d.kind, note: d.note ?? null, verification, verifiedAt, freshness: freshness({ verification, verifiedAt }, now),
+      checkNote: row?.verifyNote ?? null, lastCheckedAt: row?.lastCheckedAt ?? null };
   });
   const have = await repo.existingCardFronts(userId, l.week);
   return { slug: l.slug, title: l.title, weekId: l.week, weekState: week?.state ?? "locked", lockedBy: week?.lockedBy ?? [], body: c.lessonBodies.get(l.slug)!, resources,

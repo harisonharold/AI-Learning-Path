@@ -46,9 +46,11 @@ worker.on("failed", (job, err) => log("error", "job failed", { jobId: job?.id, k
 
 // Nightly re-verification (R-02): the scheduler survives restarts in Redis; upsert keeps one schedule.
 const queue = new Queue(QUEUE, { connection: redis.duplicate() });
-if (env.VERIFY_CRON) {
+if (env.VERIFY_CRON !== "off") {
   await queue.upsertJobScheduler("verify-nightly", { pattern: env.VERIFY_CRON, tz: "UTC" }, { name: "verify.sweep", data: {}, opts: { attempts: 3, backoff: { type: "exponential", delay: 60_000 } } });
   log("info", "verification schedule set", { cron: env.VERIFY_CRON });
+} else {
+  await queue.removeJobScheduler("verify-nightly");
 }
 
 createServer(async (req, res) => {

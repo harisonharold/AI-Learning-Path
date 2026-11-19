@@ -46,16 +46,19 @@ export async function applyVerification(o: VerifyOutcome, now = new Date()) {
     await db.update(sources).set({ lastCheckedAt: now, verifyNote: `${now.toISOString().slice(0, 10)} check inconclusive (${o.note}); previous status kept` }).where(eq(sources.id, s.id));
     return;
   }
-  const checked = o.verification === "verified" || o.verification === "partial";
+  const verification = o.verification; // narrowed: "unchanged" returned above
+  const checked = verification === "verified" || verification === "partial";
   const arxiv = o.method === "arXiv export API" && o.verification === "verified";
-  await db.update(sources).set({
-    verification: o.verification,
+  // One transaction: a reader never sees a verified source next to a paper that still has its placeholder.
+  await db.transaction(async (tx) => {
+  await tx.update(sources).set({
+    verification,
     verifiedAt: checked ? now : s.verifiedAt,
     lastCheckedAt: now,
     verifyMethod: o.method.slice(0, 100),
     verifyNote: o.note,
     finalUrl: o.finalUrl ?? s.finalUrl,
-    fetchBlockReason: o.verification === "broken" ? (o.blockReason ?? null) : null,
+    fetchBlockReason: verification === "broken" ? (o.blockReason ?? null) : null,
     rawJson: o.raw ?? s.rawJson,
     ...(o.licence !== undefined && s.kind === "repo" ? { licence: o.licence } : {}),
     ...(o.lastActivityAt ? { lastActivityAt: date(o.lastActivityAt) } : {}),
@@ -64,9 +67,10 @@ export async function applyVerification(o: VerifyOutcome, now = new Date()) {
   }).where(eq(sources.id, s.id));
   if (arxiv && o.title) {
     const raw = o.raw ?? {};
-    await db.update(papers).set({ title: o.title.slice(0, 500), abstract: typeof raw.abstract === "string" ? raw.abstract : null, authorsJson: Array.isArray(raw.authors) ? raw.authors : null })
+    await tx.update(papers).set({ title: o.title.slice(0, 500), abstract: typeof raw.abstract === "string" ? raw.abstract : null, authorsJson: Array.isArray(raw.authors) ? raw.authors : null })
       .where(eq(papers.sourceId, s.id));
   }
+  });
 }
 
 /** Most recent check of any source: the "last verification run" shown in Settings and on the paper library. */

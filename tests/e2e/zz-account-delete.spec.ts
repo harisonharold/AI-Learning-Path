@@ -14,7 +14,9 @@ test("X-14: deleting the account removes all rows, makes no GitHub call, and sho
   await expect(help.getByRole("heading", { name: "Account deleted" })).toBeVisible();
   await expect(help).toContainText("Systems Atlas did not contact GitHub");
   await expect(help.getByRole("listitem")).toHaveCount(4);
-  await expect(help).toContainText("Unverified link");
+  // The link's badge comes from its sources row: unverified on a fresh seed, "page needs sign-in" once the job has run.
+  await expect(help).toContainText(/Unverified link|Link checked; page needs sign-in/);
+  await expect(help).toContainText("The steps below are not verified");
   expect(await mockRequests()).toEqual([]);
   expect(sql("SELECT COUNT(*) FROM `user`")).toEqual(["0"]);
   expect(sql("SELECT COUNT(*) FROM jobs")).toEqual(["0"]);

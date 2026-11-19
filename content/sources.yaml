@@ -1,5 +1,5 @@
-# Source records (G §0.9, NFR-8). Every entry comes from docs/spec/SOURCES.md, which records how and when it was
-# checked (2026-11-16). The P3-core verification job re-checks them; resources show "stale" 30 days after verified_at.
+# Source records (G §0.9, NFR-8). Entries come from docs/spec/SOURCES.md (checked 2026-11-16). All were re-checked live on
+# 2026-11-19 by the P3-core verifier on a GitHub Actions runner (run 44439429301): 25 verified, 1 partial (sign-in page). The P3-core verification job re-checks them; resources show "stale" 30 days after verified_at.
 # Never add a source here without a check: an unchecked link must carry verification: unverified and verified_at: null.
 - id: missing-semester
   kind: course
@@ -7,69 +7,69 @@
   title: "MIT Missing Semester"
   note: "Shell, Git, debugging"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: python-tutorial
   kind: doc
   url: https://docs.python.org/3/tutorial/
   title: "The Python Tutorial"
   note: "SOURCES §4 records the docs showing Python 3.15.2"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: repo-uv
   kind: repo
   url: https://github.com/astral-sh/uv
   title: "astral-sh/uv: Python package and project manager"
   licence: Apache-2.0
-  last_activity_at: 2026-11-16
+  last_activity_at: 2026-11-19
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "GitHub REST /repos (SOURCES §1)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: repo-ruff
   kind: repo
   url: https://github.com/astral-sh/ruff
   title: "astral-sh/ruff: Python linter and formatter"
   licence: MIT
-  last_activity_at: 2026-11-16
+  last_activity_at: 2026-11-19
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "GitHub REST /repos (SOURCES §1)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: mit-6042j
   kind: course
   url: https://ocw.mit.edu/courses/6-042j-mathematics-for-computer-science-fall-2010/
   title: "MIT OCW 6.042J Mathematics for Computer Science"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: cmu-15213
   kind: course
   url: https://www.cs.cmu.edu/~213/
   title: "CMU 15-213 Introduction to Computer Systems"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: csapp
   kind: course
   url: https://csapp.cs.cmu.edu/
   title: "Computer Systems: A Programmer's Perspective (CS:APP 3e)"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: beej-net
   kind: doc
   url: https://beej.us/guide/bgnet/
   title: "Beej's Guide to Network Programming"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: ostep
   kind: course
   url: https://pages.cs.wisc.edu/~remzi/OSTEP/
   title: "Operating Systems: Three Easy Pieces (OSTEP)"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: roofline-tr
   kind: paper
   url: https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/EECS-2008-134.html
@@ -77,39 +77,39 @@
   venue: "UC Berkeley Tech Report EECS-2008-134"
   year: 2008
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET 200 (SOURCES §3)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: bornholt-memory-models
   kind: blog
   url: https://jamesbornholt.com/blog/memory-models/
   title: "Memory Consistency Models: A Tutorial (Bornholt)"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET 200 (SOURCES §3)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: fsrs-algorithm
   kind: doc
   url: https://github.com/open-spaced-repetition/fsrs4anki/wiki/The-Algorithm
   title: "FSRS algorithm (fsrs4anki wiki)"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: repo-ts-fsrs
   kind: repo
   url: https://github.com/open-spaced-repetition/ts-fsrs
   title: "open-spaced-repetition/ts-fsrs"
   licence: MIT
-  last_activity_at: 2026-11-13
+  last_activity_at: 2026-11-18
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "GitHub REST /repos (SOURCES §1)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: github-revoke-app
   kind: doc
   url: https://github.com/settings/apps/authorizations
   title: "GitHub settings: authorized GitHub Apps"
-  note: "Shown on account delete (PLAN D-37). github.com and docs.github.com were unreachable from the build sandbox."
-  verification: unverified
-  verified_at: null
-  verify_method: "not yet checked"
+  note: "Redirects to GitHub sign-in (checked 2026-11-19): the page exists; its contents need an account"
+  verification: partial
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 # Added 2026-11-18 for the week 4-8 lessons. The first group is recorded in docs/spec/SOURCES.md (checked 2026-11-16).
 - id: mit-6-1810
   kind: course
@@ -117,8 +117,8 @@
   title: "MIT 6.1810 Operating System Engineering, Fall 2026 (xv6)"
   note: "OS labs on xv6-riscv"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: repo-xv6-riscv
   kind: repo
   url: https://github.com/mit-pdos/xv6-riscv
@@ -126,30 +126,30 @@
   licence: NOASSERTION
   last_activity_at: 2026-11-05
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "GitHub REST API (SOURCES §1)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: go-tour
   kind: doc
   url: https://go.dev/tour/
   title: "A Tour of Go"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: effective-go
   kind: doc
   url: https://go.dev/doc/effective_go
   title: "Effective Go"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: gossip-glomers
   kind: course
   url: https://fly.io/dist-sys/
   title: "Fly.io Gossip Glomers"
   note: "Six challenges run on Maelstrom: echo, unique IDs, broadcast, grow-only counter, Kafka-style log, transactions"
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: repo-maelstrom
   kind: repo
   url: https://github.com/jepsen-io/maelstrom
@@ -157,52 +157,51 @@
   licence: EPL-1.0
   last_activity_at: 2026-07-10
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "GitHub REST API (SOURCES §1)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: cmu-15445
   kind: course
   url: https://15445.courses.cs.cmu.edu/fall2026/
   title: "CMU 15-445/645 Database Systems, Fall 2026"
   note: "The page states P1-P2 prohibit coding agents; P3-P4 permit them. We apply the same rule to self-study."
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "HTTP GET + title (SOURCES §4)"
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: repo-bustub
   kind: repo
   url: https://github.com/cmu-db/bustub
   title: "cmu-db/bustub: educational relational DBMS"
   licence: MIT
-  last_activity_at: 2026-11-13
+  last_activity_at: 2026-11-18
   verification: verified
-  verified_at: 2026-11-16
-  verify_method: "GitHub REST API (SOURCES §1)"
-# Not yet checked: these hosts were unreachable from the build environment on 2026-11-18. Shown as "Unverified"
-# until the P3-core verification job checks them.
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
+# These four were unreachable from the build environment on 2026-11-18; the live run on 2026-11-19 verified them.
 - id: rfc9112
   kind: doc
   url: https://www.rfc-editor.org/rfc/rfc9112
   title: "RFC 9112: HTTP/1.1"
-  verification: unverified
-  verified_at: null
-  verify_method: "not checked yet: host unreachable from the build environment on 2026-11-18"
+  verification: verified
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: man-epoll
   kind: doc
   url: https://man7.org/linux/man-pages/man7/epoll.7.html
   title: "epoll(7), Linux manual page"
-  verification: unverified
-  verified_at: null
-  verify_method: "not checked yet: host unreachable from the build environment on 2026-11-18"
+  verification: verified
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: gregg-flamegraphs
   kind: doc
   url: https://www.brendangregg.com/flamegraphs.html
   title: "Brendan Gregg: Flame Graphs"
-  verification: unverified
-  verified_at: null
-  verify_method: "not checked yet: host unreachable from the build environment on 2026-11-18"
+  verification: verified
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"
 - id: go-diagnostics
   kind: doc
   url: https://go.dev/doc/diagnostics
   title: "Go: Diagnostics (profiling with pprof, tracing)"
-  verification: unverified
-  verified_at: null
-  verify_method: "not checked yet: host unreachable from the build environment on 2026-11-18"
+  verification: verified
+  verified_at: 2026-11-19
+  verify_method: "safeFetch verifier on a GitHub Actions runner (run 44439429301)"

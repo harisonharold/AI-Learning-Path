@@ -52,7 +52,7 @@ export function JobsPanel() {
   );
 }
 
-type Revoke = { url: string; verification: string; steps: string[]; note: string };
+type Revoke = { url: string; verification: string; verifiedAt: string | null; steps: string[]; note: string; stepsNote?: string };
 
 export function AccountDelete() {
   const [confirm, setConfirm] = useState("");
@@ -69,8 +69,10 @@ export function AccountDelete() {
         <h2 id="deleted-title" className="text-xl">Account deleted</h2>
         <p>All your Systems Atlas data has been deleted. Systems Atlas did not contact GitHub. To revoke its access on GitHub, do this yourself:</p>
         <ol className="list-decimal space-y-1 pl-6">{done.steps.map((s) => <li key={s}>{s}</li>)}</ol>
-        <p><a href={done.url} rel="noopener noreferrer">{done.url}</a> {done.verification !== "verified" && <Badge kind="unverified">Unverified link</Badge>}</p>
-        <p className="text-sm text-[var(--ink-muted)]">{done.note}</p>
+        <p><a href={done.url} rel="noopener noreferrer">{done.url}</a>{" "}
+          {done.verification === "verified" ? <Badge kind="verified" /> : done.verification === "partial" ? <Badge kind="unverified">Link checked; page needs sign-in</Badge> : <Badge kind="unverified">Unverified link</Badge>}</p>
+        <p className="text-sm text-[var(--ink-muted)]">{done.note}{done.verifiedAt ? ` (checked ${new Date(done.verifiedAt).toISOString().slice(0, 10)})` : ""}</p>
+        {done.stepsNote && <p className="text-sm text-[var(--ink-muted)]">{done.stepsNote}</p>}
       </section>
     );
   }

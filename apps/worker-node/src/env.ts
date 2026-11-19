@@ -16,7 +16,7 @@ const schema = z
     INTERNAL_HMAC_KEY: z.string().refine((v) => Buffer.byteLength(v) >= 32, "must be at least 32 bytes"),
     HEALTH_PORT: z.coerce.number().int().default(8002),
     WEB_INTERNAL_URL: z.url().default("http://web:3000"),
-    // Nightly re-verification (UTC cron). Empty disables the schedule.
+    // Nightly re-verification (UTC cron); "off" disables the schedule.
     VERIFY_CRON: z.string().default("17 3 * * *"),
     // Test-only (ATLAS_ENV=test): API base URLs and a DNS/dial map so e2e can verify against the in-repo mock server.
     ARXIV_API_URL: z.url().optional(),

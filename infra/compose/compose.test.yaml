@@ -2,10 +2,10 @@
 # points the web container at it. ATLAS_ENV=test is the only mode in which these overrides are accepted.
 services:
   mock-github:
-    image: node:22-alpine
+    image: node:24-alpine
     working_dir: /mock
     command: ["node", "server.ts"]
-    volumes: ["../../tests/support/mock-github-oauth:/mock:ro"]
+    volumes: ["../../tests/support/mock-github-oauth:/mock:ro", "../../apps/worker-node/tests/fixtures:/fixtures:ro"]
     networks: [internal]
     ports: ["127.0.0.1:4010:4010"]
   web:
@@ -19,3 +19,12 @@ services:
       GITHUB_OAUTH_TOKEN_URL: http://mock-github:4010/login/oauth/access_token
       GITHUB_API_URL: http://mock-github:4010/api
     depends_on: [mock-github]
+  worker-node:
+    environment:
+      ATLAS_ENV: test
+      VERIFY_CRON: "off" # the e2e suite triggers verification itself
+      # Test-only DNS + dial map (refused by the env loader unless ATLAS_ENV=test): these public names resolve to a
+      # public-looking address that the dialer sends to the mock server, so the full SSRF guard still runs.
+      VERIFY_TEST_DNS: '{"missing.csail.mit.edu":"93.184.215.14","export.arxiv.org":"93.184.215.14","blocked.example.org":"93.184.215.14"}'
+      VERIFY_TEST_DIAL: '{"93.184.215.14":"mock-github:4010"}'
+    depends_on: { mock-github: { condition: service_started } }

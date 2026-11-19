@@ -6,7 +6,7 @@ import { StateBadge } from "@/components/StateBadge";
 import { pageUser } from "@/modules/auth/service";
 import { lesson, LearningError } from "@/modules/learning/service";
 import { getEnv } from "@/modules/platform/service";
-import { AddCards, ReportLink } from "./client";
+import { AddCards, RecheckButton, ReportLink } from "./client";
 
 export const dynamic = "force-dynamic";
 
@@ -43,11 +43,14 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
               <li key={r.id} data-resource={r.id} data-freshness={r.freshness}>
                 <a href={r.url} rel="noopener noreferrer" target="_blank">{r.title}</a>
                 {r.note && <span className="text-sm text-[var(--ink-muted)]"> — {r.note}</span>}
+                {r.checkNote && r.verification !== "verified" && <p className="mt-1 text-xs text-[var(--ink-muted)]" data-check-note>Last check: {r.checkNote}</p>}
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                  {r.freshness === "fresh" && <Badge kind="verified">Verified {r.verifiedAt ? new Date(r.verifiedAt).toISOString().slice(0, 10) : ""}</Badge>}
+                  {r.freshness === "fresh" && r.verification === "partial" && <Badge kind="unverified">Partly verified {r.verifiedAt ? new Date(r.verifiedAt).toISOString().slice(0, 10) : ""}</Badge>}
+                  {r.freshness === "fresh" && r.verification !== "partial" && <Badge kind="verified">Verified {r.verifiedAt ? new Date(r.verifiedAt).toISOString().slice(0, 10) : ""}</Badge>}
                   {r.freshness === "stale" && <Badge kind="stale">Stale — verified {r.verifiedAt ? new Date(r.verifiedAt).toISOString().slice(0, 10) : ""}, re-check</Badge>}
                   {r.freshness === "unverified" && <Badge kind="unverified">Unverified</Badge>}
                   {r.freshness === "broken" && <Badge kind="stale">Broken link</Badge>}
+                  {r.sourceId && <RecheckButton sourceId={r.sourceId} />}
                   {r.sourceId && <ReportLink sourceId={r.sourceId} />}
                 </div>
               </li>
