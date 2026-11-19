@@ -35,7 +35,7 @@ console.log(`=== DONE ${new Date().toISOString()} sources=${entries.length}`);
 
 // Q27: course repositories atlas-lab may run graders from (the learner's own clone, pinned). Read-only lookups of
 // branch commits and the LICENSE header; nothing is copied into this repository.
-for (const repo of ["https://g.csail.mit.edu/xv6-labs-2026"]) {
+for (const repo of ["git://g.csail.mit.edu/xv6-labs-2026"]) {
   try {
     const refs = execFileSync("git", ["ls-remote", repo], { encoding: "utf8", timeout: 60_000 });
     console.log(`=== COURSE-REFS ${repo}\n${refs.trim()}\n=== END COURSE-REFS`);
