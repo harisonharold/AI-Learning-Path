@@ -95,12 +95,13 @@ test("AT-12: lesson resources show verified_at, and a stale warning after 30 day
   await page.goto("/learn/w01-tooling");
   const res = page.locator("[data-resource]");
   await expect(res).toHaveCount(5);
-  for (const r of await res.all()) await expect(r).toContainText(/Verified 2026-11-16|Stale/);
+  // Dates come from the sources rows (seeded, then re-checked by the verifier), so any verified date is fine here.
+  for (const r of await res.all()) await expect(r).toContainText(/Verified \d{4}-\d{2}-\d{2}|Stale/);
   sql("UPDATE sources SET verified_at='2026-10-01 00:00:00' WHERE url='https://missing.csail.mit.edu/'");
   await page.reload();
   await expect(page.locator("[data-resource=missing-semester]")).toHaveAttribute("data-freshness", "stale");
   await expect(page.locator("[data-resource=missing-semester]")).toContainText("Stale — verified 2026-10-01, re-check");
-  sql("UPDATE sources SET verified_at='2026-11-16 00:00:00' WHERE url='https://missing.csail.mit.edu/'");
+  sql("UPDATE sources SET verified_at=NOW() WHERE url='https://missing.csail.mit.edu/'");
 });
 
 test("gate quiz is graded on the server; the gate stays pending until the atlas-lab result exists (AT-07)", async ({ page }) => {

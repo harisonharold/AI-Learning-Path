@@ -32,7 +32,9 @@ describe("X-14 account delete makes no GitHub call and shows revoke-by-hand step
       const body = await res.json();
       expect(body.githubRevoke.steps.length).toBeGreaterThan(2);
       expect(body.githubRevoke.url).toMatch(/^https:\/\/github\.com\//);
-      expect(body.githubRevoke.verification).toBe("unverified");
+      // From the link's sources row (D-37): the 2026-11-19 live check found it behind GitHub sign-in, so "partial".
+      expect(body.githubRevoke.verification).toBe("partial");
+      expect(body.githubRevoke.stepsNote).toMatch(/steps below are not verified/);
     } finally {
       globalThis.fetch = realFetch;
     }

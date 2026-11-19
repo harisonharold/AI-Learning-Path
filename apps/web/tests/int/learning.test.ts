@@ -225,10 +225,10 @@ describe("AT-10 via the API: diagnostic", () => {
 });
 
 describe("AT-12 (data): lesson resources carry verified_at and a stale flag after 30 days", () => {
-  it("fresh today, stale 31 days after 2026-11-16", async () => {
+  it("fresh now, stale more than 30 days after the seed's verified_at (2026-11-19)", async () => {
     const now = (await lesson(u.id, "w01-tooling", new Date("2026-11-20T00:00:00Z"))).resources;
     expect(now.every((r) => r.verifiedAt && r.freshness === "fresh")).toBe(true);
-    const later = (await lesson(u.id, "w01-tooling", new Date("2026-12-18T00:00:00Z"))).resources;
+    const later = (await lesson(u.id, "w01-tooling", new Date("2026-12-21T00:00:00Z"))).resources;
     expect(later.every((r) => r.freshness === "stale")).toBe(true);
   });
   it("the lesson API includes verified_at for every resource", async () => {
