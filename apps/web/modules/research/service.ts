@@ -1,5 +1,7 @@
 import "server-only";
-import { enqueueJob, getEnv } from "@/modules/platform/service";
+import { audit, enqueueJob, getEnv, sha256Hex } from "@/modules/platform/service";
+import * as paperRepo from "./internal/papers.ts";
+import * as sourceRepo from "./internal/sources.ts";
 import { callApiPy } from "./internal/apipy.ts";
 import { type BenchmarkUpload, configHash, envFingerprint } from "./internal/contract.ts";
 import * as repo from "./internal/repo.ts";
@@ -117,6 +119,8 @@ export async function applyJobResult(job: { id: string; kind: string; status: st
     const runId = Number((job.payloadJson as { run_id?: number }).run_id);
     if (job.status === "done") await repo.applyStats(runId, (job.resultJson as { metrics: Record<string, Record<string, unknown>> }).metrics);
     else await repo.markStatsFailed(runId);
+  } else if (job.kind === "verify.source") {
+    if (job.status === "done" && job.resultJson) await sourceRepo.applyVerification(job.resultJson as sourceRepo.VerifyOutcome);
   } else if (job.kind === "report.render") {
     const r = job.resultJson as { markdown?: string; html?: string } | null;
     await repo.finishReport(job.id, job.status === "done" && r?.markdown && r.html ? { markdown: r.markdown, html: r.html } : { error: job.error ?? "Report rendering failed." });
@@ -241,4 +245,82 @@ export async function analytics(userId: string, projectId: number) {
 
 export async function deleteRawData(userId: string) {
   await repo.removeRawData(getEnv().RAW_DATA_DIR, userId);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// P3-core: source verification and the paper library
+
+const VERIFY_EVERY_HOURS = 20;
+const SWEEP_LIMIT = 300;
+
+/** Queues a verification of one source (worker-node, SSRF-guarded safeFetch). */
+export async function requestVerification(userId: string | null, sourceId: number) {
+  const s = await sourceRepo.sourceById(sourceId);
+  if (!s) throw new ResearchError("NOT_FOUND", "Source not found.");
+  const jobId = await enqueueJob(userId, "verify.source", { sourceId: s.id, url: s.url, kind: s.kind, externalId: s.externalId, expectedTitle: null });
+  return { jobId, sourceId: s.id };
+}
+
+/** Nightly sweep (called by worker-node's schedule over HMAC): queue every source not checked for 20 h. */
+export async function sweep(now = new Date()) {
+  const due = await sourceRepo.dueSources(VERIFY_EVERY_HOURS, SWEEP_LIMIT, now);
+  for (const s of due) await enqueueJob(null, "verify.source", { sourceId: s.id, url: s.url, kind: s.kind, externalId: s.externalId, expectedTitle: null });
+  await audit(null, "verify.sweep", null, { enqueued: due.length });
+  return { enqueued: due.length };
+}
+
+export async function verificationStatus() {
+  return { lastCheckAt: await sourceRepo.latestCheck(), everyHours: VERIFY_EVERY_HOURS };
+}
+
+const ARXIV_ID = /^(\d{4}\.\d{4,5}|[a-z-]+(\.[A-Z]{2})?\/\d{7})(v\d+)?$/i;
+
+/**
+ * Adds a paper to the library (FR-11). Its title, authors and abstract come only from the arXiv API once the
+ * verification job has run; until then the entry is shown as unverified with a placeholder title (no invented data).
+ */
+export async function addPaper(userId: string, input: { arxivId: string } | { url: string; title: string }) {
+  let url: string;
+  let title: string;
+  let externalId: string | null = null;
+  if ("arxivId" in input) {
+    const id = input.arxivId.trim().replace(/^arxiv:/i, "").replace(/v\d+$/, "");
+    if (!ARXIV_ID.test(id)) throw new ResearchError("INVALID", "Request failed validation.", { fields: [{ path: "arxivId", message: "not an arXiv identifier such as 2309.06180" }] });
+    url = `https://arxiv.org/abs/${id}`;
+    title = `arXiv:${id} (waiting for verification)`;
+    externalId = id;
+  } else {
+    url = new URL(input.url).href;
+    title = input.title;
+  }
+  const hash = sha256Hex(url);
+  let source = await sourceRepo.findSourceByUrlHash(hash);
+  if (!source) {
+    const id = await sourceRepo.insertSource({ kind: "paper", url, urlHash: hash, title, externalId, verification: "unverified", verifiedAt: null, lastCheckedAt: new Date(0),
+      verifyMethod: "not checked yet", verifyNote: "added to the paper library; verification queued" });
+    source = (await sourceRepo.sourceById(id))!;
+  }
+  const existing = await paperRepo.paperOf(userId, source.id);
+  if (existing) return { paperId: existing.id, sourceId: source.id, duplicate: true, jobId: null };
+  const paperId = await paperRepo.insertPaper({ userId, sourceId: source.id, title: source.verification === "verified" ? (source.title ?? title) : title,
+    abstract: source.verification === "verified" ? ((source.rawJson as { abstract?: string } | null)?.abstract ?? null) : null,
+    authorsJson: source.verification === "verified" ? ((source.rawJson as { authors?: string[] } | null)?.authors ?? null) : null });
+  const { jobId } = await requestVerification(userId, source.id);
+  return { paperId, sourceId: source.id, duplicate: false, jobId };
+}
+
+export async function papers(userId: string, q?: string) {
+  return paperRepo.listPapers(userId, q);
+}
+
+export async function patchPaper(userId: string, id: number, patch: { userNotes?: string | undefined; status?: "to_read" | "read" | "analysed" | undefined }) {
+  const p = await paperRepo.paperById(id);
+  if (!p) throw new ResearchError("NOT_FOUND", "Paper not found.");
+  if (p.userId !== userId) throw new ResearchError("FORBIDDEN", "Not your paper.");
+  await paperRepo.updatePaper(id, { ...(patch.userNotes !== undefined ? { userNotes: patch.userNotes } : {}), ...(patch.status ? { status: patch.status } : {}) });
+  return { id, ...patch };
+}
+
+export async function paperOwner(id: number) {
+  return (await paperRepo.paperById(id))?.userId;
 }

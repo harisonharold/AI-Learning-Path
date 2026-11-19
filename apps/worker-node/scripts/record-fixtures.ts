@@ -2,7 +2,7 @@
  * Records network fixtures and live verification results from a machine with internet access (the GitHub Actions
  * runner), because the build environment cannot reach arXiv. Output goes to stdout between markers; the fixtures are
  * copied into apps/worker-node/tests/fixtures/ by hand, unchanged. Uses only Node built-ins and the real verifier.
- *   node apps/worker-node/scripts/record-fixtures.ts
+ *   node apps/worker-node/scripts/record-fixtures.ts   (second run: re-checks the tightened captcha heuristic)
  */
 import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";

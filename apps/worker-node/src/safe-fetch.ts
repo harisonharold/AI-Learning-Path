@@ -154,9 +154,14 @@ function requestOnce(c: Extract<Checked, { ok: true }>, addr: Resolved, o: Requi
       path: `${c.url.pathname}${c.url.search}`,
       // Connect to the validated address only.
       lookup: (_h: string, opts: { all?: boolean }, cb: (err: Error | null, address: string | { address: string; family: number }[], family?: number) => void) => {
-        const family = isIP(target.host) || 4;
-        if (opts?.all) cb(null, [{ address: target.host, family }]);
-        else cb(null, target.host, family);
+        const answer = (address: string) => {
+          const family = isIP(address) || 4;
+          if (opts?.all) cb(null, [{ address, family }]);
+          else cb(null, address, family);
+        };
+        // Production: target.host is the validated IP. Only the test dialer can name a host (a Compose mock server).
+        if (isIP(target.host)) answer(target.host);
+        else dnsLookup(target.host).then((a) => answer(a.address), (e: Error) => cb(e, ""));
       },
       setHost: false,
       headers: { host: c.url.host, "user-agent": USER_AGENT, accept: o.accept, "accept-encoding": "identity", connection: "close" },

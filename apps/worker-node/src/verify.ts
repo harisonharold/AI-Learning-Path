@@ -57,9 +57,15 @@ export function parseArxivFeed(xml: string, id: string): VerifyResult {
   };
 }
 
-/** Markers of bot walls and access-denied pages (AT-23). Matching any of them means "not verified". */
-const CHALLENGE = [/captcha/i, /cf-challenge|challenge-platform|cf_chl_/i, /attention required/i, /access denied/i, /just a moment\.\.\./i,
-  /verify (that )?you are (a )?human/i, /are you a robot/i, /enable javascript and cookies to continue/i, /request blocked/i, /unusual traffic/i];
+/**
+ * Bot walls and access-denied pages (AT-23). Titles are always checked. Body phrases are checked only on small pages
+ * or error responses: real challenge pages are small, while large normal pages (GitHub's, for example) mention
+ * "captcha" in their scripts, which made the first live run flag two good pages.
+ */
+const CHALLENGE_TITLE = [/captcha/i, /attention required/i, /access denied/i, /just a moment/i, /are you a robot/i, /verify (that )?you are (a )?human/i, /request blocked/i, /security check/i];
+const CHALLENGE_BODY = [/cf-challenge|challenge-platform|cf_chl_/i, /g-recaptcha|h-captcha|class="captcha/i, /checking your browser/i, /verify (that )?you are (a )?human/i,
+  /enable javascript and cookies to continue/i, /unusual traffic from your computer/i, /access denied/i, /request blocked/i];
+const SMALL_PAGE = 64 * 1024;
 const SIGN_IN = /\/(login|signin|sign_in|sign-in|session)(\/|\?|$)/i;
 
 function htmlTitle(body: string): string | null {
@@ -76,15 +82,16 @@ export function judgePage(r: SafeFetchResult, expectedTitle?: string | null): Ve
   }
   const body = r.body.toString("utf8");
   const title = htmlTitle(body);
-  const sample = `${title ?? ""}\n${body.slice(0, 20_000)}`;
-  if (CHALLENGE.some((re) => re.test(sample))) {
+  const finalPath = new URL(r.finalUrl).pathname + new URL(r.finalUrl).search;
+  if (r.redirects.length && SIGN_IN.test(finalPath) && r.status < 400) {
+    return { verification: "partial", method, note: "redirects to a sign-in page; the page exists but its content needs an account to check", finalUrl: r.finalUrl, title: title ?? undefined };
+  }
+  const challenged = CHALLENGE_TITLE.some((re) => re.test(title ?? "")) || ((body.length < SMALL_PAGE || r.status >= 400) && CHALLENGE_BODY.some((re) => re.test(body)));
+  if (challenged) {
     return { verification: r.status >= 400 ? "broken" : "partial", method, note: `HTTP ${r.status}: looks like a captcha or access-denied page, so the content could not be checked`, finalUrl: r.finalUrl, title: title ?? undefined };
   }
   if (r.status === 429 || r.status >= 500) return { verification: "unchanged", method, note: `temporary failure: HTTP ${r.status}`, finalUrl: r.finalUrl };
   if (r.status >= 400) return { verification: "broken", method, note: `HTTP ${r.status}`, finalUrl: r.finalUrl };
-  if (SIGN_IN.test(new URL(r.finalUrl).pathname + new URL(r.finalUrl).search) && r.redirects.length) {
-    return { verification: "partial", method, note: "redirects to a sign-in page; the page exists but its content needs an account to check", finalUrl: r.finalUrl, title: title ?? undefined };
-  }
   if (!title) return { verification: "partial", method, note: `HTTP ${r.status} but the page has no title to check`, finalUrl: r.finalUrl };
   if (expectedTitle && !norm(title).includes(norm(expectedTitle).slice(0, 40)) && !norm(expectedTitle).includes(norm(title).slice(0, 40))) {
     return { verification: "partial", method, note: `HTTP ${r.status}; the page title changed to "${title}"`, finalUrl: r.finalUrl, title };

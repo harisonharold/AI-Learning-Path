@@ -31,6 +31,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const applied = await completeJob(id, body.data.status, body.data.result, body.data.error ?? null, body.data.attempts);
   if (!applied) return apiError(409, "JOB_NOT_OPEN", "Job is unknown or already finished.");
   const job = await getJob(id);
-  if (job && (job.kind === "stats.summarize" || job.kind === "report.render")) await applyJobResult(job);
+  if (job && ["stats.summarize", "report.render", "verify.source"].includes(job.kind)) await applyJobResult(job);
   return NextResponse.json({ ok: true });
 }
