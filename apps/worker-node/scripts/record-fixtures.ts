@@ -1,8 +1,9 @@
 /**
- * Records network fixtures and live verification results from a machine with internet access (the GitHub Actions
+ * Records network fixtures and live verification results from a machine with internet access (a GitHub Actions
  * runner), because the build environment cannot reach arXiv. Output goes to stdout between markers; the fixtures are
  * copied into apps/worker-node/tests/fixtures/ by hand, unchanged. Uses only Node built-ins and the real verifier.
- *   node apps/worker-node/scripts/record-fixtures.ts   (second run: re-checks the tightened captcha heuristic)
+ *   node apps/worker-node/scripts/record-fixtures.ts
+ * It ran in a temporary workflow (runs 44438734135, 44439429301, 44442473884, 44442659584) that was then removed.
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";

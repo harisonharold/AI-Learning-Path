@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 import { createHash } from "node:crypto";
-import { Curriculum, Diagnostic, Exercise, GateBundle, Lesson, Quiz, Source, validateContent, type Content, type LoadedBundle } from "./content-schema.ts";
+import { CourseGrader, Curriculum, Diagnostic, Exercise, GateBundle, Lesson, Quiz, Source, validateContent, type Content, type LoadedBundle } from "./content-schema.ts";
 
 /** Same canonical JSON as research's contract and atlas-lab (sorted keys, no whitespace); the bundle hash must agree. */
 function canonical(v: unknown): string {
@@ -50,7 +50,9 @@ export function loadContent(dir = contentDir()): Content {
   );
   const diagnostic = Diagnostic.parse(y("diagnostic.yaml"));
   const lessonBodies = new Map(lessons.map((l) => [l.slug, readFileSync(join(dir, l.body), "utf8")] as const));
-  const content: Content = { curriculum, sources, lessons, quizzes, exercises, diagnostic, lessonBodies, gateBundles: loadBundles(dir) };
+  let courseGraders: CourseGrader[] = [];
+  try { courseGraders = z.array(CourseGrader).parse(y("course-graders.yaml")); } catch (e) { if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e; }
+  const content: Content = { curriculum, sources, lessons, quizzes, exercises, diagnostic, lessonBodies, gateBundles: loadBundles(dir), courseGraders };
   const errs = validateContent(content);
   if (errs.length) throw new Error(`content invalid:\n${errs.join("\n")}`);
   return content;

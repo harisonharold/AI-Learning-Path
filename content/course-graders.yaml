@@ -1,0 +1,35 @@
+# Course graders atlas-lab may run (Q27, approved 2026-11-19): from the learner's OWN local clone, pinned to the commit
+# below, inside the same --network none container. Nothing from these repositories is copied, vendored or
+# redistributed into Systems Atlas. Licences and commits were read on 2026-11-19 (GitHub repos with git from the build
+# environment; the MIT xv6 labs over git:// from a GitHub Actions runner, run 44442659584). If an entry's licence did not
+# allow this use, `use_allowed: false` would make that gate manual/self-assessed (enforced by a content test).
+- week: RI-W04
+  gate_ref: "atlas-lab:w04@1"
+  course: "MIT 6.1810 Operating System Engineering, Fall 2026"
+  repo: "git://g.csail.mit.edu/xv6-labs-2026"
+  pins: { util: 8138d07d83441198b898e37d22840f5900cc0c32, syscall: 99161db76e00d70945f5248c7439b64323e6077c }
+  licence: "MIT (xv6 LICENSE file: \"Permission is hereby granted, free of charge ...\")"
+  use_allowed: true
+  grader: "the lab branch's own grade-lab-<lab> script (gradelib.py), run with make grade"
+  course_rules: null
+  status: pinned; grader bundle not built yet
+- week: RI-W07
+  gate_ref: "atlas-lab:w07@1"
+  course: "Fly.io Gossip Glomers (challenges 1-3) on Maelstrom"
+  repo: "https://github.com/jepsen-io/maelstrom"
+  pins: { "v0.2.4": b70544f95ee0579b1a5e4bdf60bb2f90a44171bc }
+  licence: "EPL-1.0 (LICENSE file; running the unmodified program is permitted)"
+  use_allowed: true
+  grader: "maelstrom test -w echo / unique-ids / broadcast with the challenge's documented parameters"
+  course_rules: null
+  status: pinned; grader bundle not built yet
+- week: RI-W08
+  gate_ref: "atlas-lab:w08@1"
+  course: "CMU 15-445/645 Database Systems, Fall 2026 (BusTub Project 1)"
+  repo: "https://github.com/cmu-db/bustub"
+  pins: { master: 820bcaf90710ec39f463532a10f6c66cd2368491 }
+  licence: "MIT (LICENSE file: Copyright (c) 2019 CMU Database Group)"
+  use_allowed: true
+  grader: "the repository's Project 1 tests (ctest) from the learner's clone"
+  course_rules: "Course policy: no coding agents on P1-P2; students may be asked not to publish solutions. Systems Atlas follows both."
+  status: pinned; grader bundle not built yet
