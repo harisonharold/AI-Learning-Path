@@ -237,7 +237,7 @@ describe("AT-19: report generation needs a baseline and enough repetitions", () 
     const { jobId } = await res.json() as { jobId: string };
     const job = (await db.select().from(jobs).where(eq(jobs.id, jobId)))[0]!;
     expect(job.kind).toBe("report.render");
-    const pr = await (await (await routes.project()).GET(req(`/api/projects/${pid}`, { cookie: u.cookie }), P(pid))).json() as { readiness: { ready: boolean }; runs: { status: string }[] };
+    const pr = await (await (await routes.project()).GET(req(`/api/projects/${pid}`, { cookie: u.cookie }), P(pid))).json() as { readiness: { ready: boolean }; runs: { id: number; status: string }[] };
     expect(pr.readiness.ready).toBe(true);
     expect(pr.runs.some((r) => r.status === "failed")).toBe(true);
     expect((job.payloadJson as { run_ids: number[] }).run_ids.length).toBe(pr.runs.length);
